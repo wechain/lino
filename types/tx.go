@@ -28,12 +28,15 @@ const (
 	// Account transactions
 	TxTypeSend = byte(0x01)
 	TxTypeApp  = byte(0x02)
+	TxTypePost  = byte(0x03)
 	TxNameSend = "send"
 	TxNameApp  = "app"
+	TxNamePost  = "post"
 )
 
 func (_ *SendTx) AssertIsTx() {}
 func (_ *AppTx) AssertIsTx()  {}
+func (_ *PostTx) AssertIsTx()  {}
 
 var txMapper data.Mapper
 
@@ -41,7 +44,8 @@ var txMapper data.Mapper
 func init() {
 	txMapper = data.NewMapper(TxS{}).
 		RegisterImplementation(&SendTx{}, TxNameSend, TxTypeSend).
-		RegisterImplementation(&AppTx{}, TxNameApp, TxTypeApp)
+		RegisterImplementation(&AppTx{}, TxNameApp, TxTypeApp).
+		RegisterImplementation(&PostTx{}, TxNamePost, TxTypePost)
 }
 
 // TxS add json serialization to Tx
@@ -219,6 +223,51 @@ func (tx *AppTx) SetSignature(sig crypto.Signature) bool {
 
 func (tx *AppTx) String() string {
 	return Fmt("AppTx{%v/%v %v %v %X}", tx.Gas, tx.Fee, tx.Name, tx.Input, tx.Data)
+}
+
+//-----------------------------------------------------------------------------
+
+type PostTx struct {
+	Address   data.Bytes       `json:"address"`   // Hash of the PubKey
+	Title     string           `json:"title"`
+	Content   string           `json:"content"`
+	Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed PostTx
+	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
+	PubKey    crypto.PubKey    `json:"pub_key"`   // Is present iff Sequence == 0
+}
+
+func (tx *PostTx) SignBytes(chainID string) []byte {
+	signBytes := wire.BinaryBytes(chainID)
+	sig := tx.Signature
+	tx.Signature = crypto.Signature{}
+	signBytes = append(signBytes, wire.BinaryBytes(tx)...)
+	tx.Signature = sig
+	return signBytes
+}
+
+func (tx *PostTx) SetSignature(sig crypto.Signature) bool {
+	tx.Signature = sig
+	return true
+}
+
+func (tx PostTx) ValidateBasic() abci.Result {
+	if len(tx.Address) != 20 {
+		return abci.ErrBaseInvalidInput.AppendLog("Invalid address length")
+	}
+	if tx.Sequence <= 0 {
+		return abci.ErrBaseInvalidInput.AppendLog("Sequence must be greater than 0")
+	}
+	if tx.Sequence == 1 && tx.PubKey.Empty() {
+		return abci.ErrBaseInvalidInput.AppendLog("PubKey must be present when Sequence == 1")
+	}
+	if tx.Sequence > 1 && !tx.PubKey.Empty() {
+		return abci.ErrBaseInvalidInput.AppendLog("PubKey must be nil when Sequence > 1")
+	}
+	return abci.OK
+}
+
+func (tx *PostTx) String() string {
+	return Fmt("PostTx{%v, %v, %v, %v}", tx.Address, tx.Title, tx.Content, tx.Sequence)
 }
 
 //-----------------------------------------------------------------------------

@@ -67,6 +67,20 @@ func TestAppTxSignable(t *testing.T) {
 		"Got unexpected sign string for SendTx. Expected:\n%v\nGot:\n%v", expected, signBytesHex)
 }
 
+func TestPostTxSignable(t *testing.T) {
+	postTx := &PostTx{
+		Address:  []byte("input1"),
+		Title:    "Title",
+		Content:  "Content",
+	}
+	signBytes := postTx.SignBytes(chainID)
+	signBytesHex := fmt.Sprintf("%X", signBytes)
+	expected := "010A746573745F636861696E010106696E7075743101055469746C650107436F6E74656E74000000"
+
+	assert.Equal(t, signBytesHex, expected,
+		"Got unexpected sign string for PostTx. Expected:\n%v\nGot:\n%v", expected, signBytesHex)
+}
+
 func TestSendTxJSON(t *testing.T) {
 	assert, require := assert.New(t), require.New(t)
 
