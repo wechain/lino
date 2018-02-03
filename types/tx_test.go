@@ -72,12 +72,13 @@ func TestPostTxSignable(t *testing.T) {
 		Address:  []byte("input1"),
 		Title:    "Title",
 		Content:  "Content",
+		Parent:   []byte("parent"),
 	}
 	signBytes := postTx.SignBytes(chainID)
 	signBytesHex := fmt.Sprintf("%X", signBytes)
-	expected := "010A746573745F636861696E010106696E7075743101055469746C650107436F6E74656E74000000"
+	expected := "010A746573745F636861696E010106696E7075743101055469746C650107436F6E74656E74000106706172656E740000"
 
-	assert.Equal(t, signBytesHex, expected,
+	assert.Equal(t, expected, signBytesHex,
 		"Got unexpected sign string for PostTx. Expected:\n%v\nGot:\n%v", expected, signBytesHex)
 }
 

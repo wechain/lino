@@ -407,6 +407,30 @@ func TestPostTx(t *testing.T) {
 	endPostSeq = et.state.GetAccount(et.accOut.Account.PubKey.Address()).LastPost
 	assert.Equal(endPostSeq, initPostSeq + 1)
 
+	// First post
+	acc := types.MakeAcc("post")
+	tx = types.MakePostTx(1, acc)
+	signBytes = tx.SignBytes(et.chainID)
+	tx.Signature = acc.Sign(signBytes)
+	preAcc := et.state.GetAccount(acc.Account.PubKey.Address())
+
+	assert.True(preAcc == nil)
+	res = ExecTx(et.state, nil, tx, false, nil)
+	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
+	endPostSeq = et.state.GetAccount(acc.Account.PubKey.Address()).LastPost
+	assert.Equal(1, endPostSeq)
+
+	// Test comment
+	tx = types.MakePostTx(2, acc)
+	tx.Parent = types.PostID(acc.Account.PubKey.Address(), 1)
+	signBytes = tx.SignBytes(et.chainID)
+	tx.Signature = acc.Sign(signBytes)
+
+	res = ExecTx(et.state, nil, tx, false, nil)
+	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
+	endPostSeq = et.state.GetAccount(acc.Account.PubKey.Address()).LastPost
+	assert.Equal(2, endPostSeq)
+
 	// Invalid seq no
 	tx = types.MakePostTx(100, et.accOut)
 	signBytes = tx.SignBytes(et.chainID)
@@ -428,23 +452,14 @@ func TestPostTx(t *testing.T) {
 	endPostSeq = et.state.GetAccount(et.accOut.Account.PubKey.Address()).LastPost
 	assert.Equal(endPostSeq, initPostSeq)
 
-	// Unknown Address
-	acc := types.MakeAcc("post")
-	tx = types.MakePostTx(1, acc)
+	// Invalid comment
+	tx = types.MakePostTx(2, acc)
+	tx.Parent = []byte("parent")
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = acc.Sign(signBytes)
-	preAcc := et.state.GetAccount(acc.Account.PubKey.Address())
 
-	assert.True(preAcc == nil)
 	res = ExecTx(et.state, nil, tx, false, nil)
-	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
+	assert.Equal(abci.ErrBaseUnknownAddress.Code, res.Code, "ExecTx/Bad PostTx: expected error on tx input with bad sequence")
 	endPostSeq = et.state.GetAccount(acc.Account.PubKey.Address()).LastPost
-	assert.Equal(1, endPostSeq)
-}
-
-func TestGetUsername(t *testing.T) {
-	assert := assert.New(t)
-	et := newExecTest()
-
-	assert.Equal(getUsername(et.accOut.Account), string(et.accOut.Account.PubKey.Address()))
+	assert.Equal(2, endPostSeq)
 }

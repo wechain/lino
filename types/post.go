@@ -9,11 +9,13 @@ import (
 type Post struct {
 	Title    string `json:"denom"`
 	Content  string `json:"content"`
+	Author   []byte `json:"author"`
+	Parent   []byte `json:"parent"` // non-empty if it is a comment.
 }
 
 func (post Post) String() string {
-	return fmt.Sprintf("title:%v, content:%v",
-					   post.Title, post.Content)
+	return fmt.Sprintf("author:%v, title:%v, content:%v",
+					   post.Author, post.Title, post.Content)
 }
 
 // Post id is computed by the address and sequence.

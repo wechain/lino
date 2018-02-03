@@ -232,6 +232,7 @@ type PostTx struct {
 	Title     string           `json:"title"`
 	Content   string           `json:"content"`
 	Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed PostTx
+	Parent    []byte           `json:"parent"`
 	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
 	PubKey    crypto.PubKey    `json:"pub_key"`   // Is present iff Sequence == 0
 }

@@ -159,6 +159,10 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 		if res.IsErr() {
 			return res
 		}
+		if tx.Parent != nil && state.GetPost(tx.Parent) == nil {
+			// TODO change to unknownpost
+			return abci.ErrBaseUnknownAddress
+		}
 		// Get post author account
 		acc := state.GetAccount(tx.Address)
 		if acc == nil {
@@ -178,6 +182,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 		post := &types.Post {
 			Title: tx.Title,
 			Content: tx.Content,
+			Parent: tx.Parent,
 		}
 		state.SetAccount(tx.Address, acc)
 		state.SetPost(types.PostID(tx.Address, acc.LastPost), post)
@@ -348,8 +353,4 @@ func adjustByOutputs(state *State, accounts map[string]*types.Account, outs []ty
 			state.SetAccount(outAddress, acc)
 		}
 	}
-}
-
-func getUsername(account types.Account) string{
-	return string(account.PubKey.Address())
 }
