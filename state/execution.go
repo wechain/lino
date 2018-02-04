@@ -187,6 +187,52 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 		state.SetAccount(tx.Address, acc)
 		state.SetPost(types.PostID(tx.Address, acc.LastPost), post)
 		return abci.NewResultOK(types.TxID(chainID, tx), "")
+	case *types.DonateTx:
+        pAcc := state.GetAccount(tx.From)
+		if pAcc == nil {
+			return abci.ErrBaseUnknownAddress
+		}
+		if !tx.PubKey.Empty() {
+			pAcc.PubKey = tx.PubKey
+		}
+		pAcc.Sequence += 1
+		res := tx.ValidateBasic()
+		if res.IsErr() {
+			return res
+		}
+		var txInput []types.TxInput
+		txInput = append(txInput, types.TxInput{Address: tx.From, Coins: tx.Amount, Sequence: pAcc.Sequence, Signature: tx.Signature, PubKey: tx.PubKey})
+		accounts, res := getInputs(state, txInput)
+		if res.IsErr() {
+			return res.PrependLog("in getInputs()")
+		}
+		post := state.GetPost(tx.To);
+		// Get or make outputs.
+		var txOutput []types.TxOutput
+		txOutput = append(txOutput, types.TxOutput{Address: []byte(post.Author), Coins: tx.Amount})
+		accounts, res = getOrMakeOutputs(state, accounts, txOutput)
+		if res.IsErr() {
+			return res.PrependLog("in getOrMakeOutputs()")
+		}
+		// Validate inputs and outputs, advanced
+		signBytes := tx.SignBytes(chainID)
+		inTotal, res := validateInputsAdvanced(accounts, signBytes, txInput)
+		if res.IsErr() {
+			return res.PrependLog("in validateInputsAdvanced()")
+		}
+		outTotal := sumOutputs(txOutput)
+		outPlusAmount := outTotal
+		amount := tx.Amount
+		if amount.IsValid() { // TODO: fix coins.Plus()
+			outPlusAmount = outTotal.Plus(amount)
+		}
+		if !inTotal.IsEqual(outPlusAmount) {
+			return abci.ErrBaseInvalidOutput.AppendLog(cmn.Fmt("Input total (%v) != output total + amount (%v)", inTotal, outPlusAmount))
+		}
+		adjustByInputs(state, accounts, txInput)
+		adjustByOutputs(state, accounts, txOutput, isCheckTx)
+		return abci.NewResultOK(types.TxID(chainID, tx), "")
+
 	default:
 		return abci.ErrBaseEncodingError.SetLog("Unknown tx type")
 	}
