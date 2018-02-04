@@ -29,14 +29,17 @@ const (
 	TxTypeSend = byte(0x01)
 	TxTypeApp  = byte(0x02)
 	TxTypePost  = byte(0x03)
+	TxTypeDonate = byte(0x80)
 	TxNameSend = "send"
 	TxNameApp  = "app"
 	TxNamePost  = "post"
+	TxNameDonate = "donate"
 )
 
 func (_ *SendTx) AssertIsTx() {}
 func (_ *AppTx) AssertIsTx()  {}
 func (_ *PostTx) AssertIsTx()  {}
+func (_ *DonateTx) AssertIsTx() {}
 
 var txMapper data.Mapper
 
@@ -45,7 +48,8 @@ func init() {
 	txMapper = data.NewMapper(TxS{}).
 		RegisterImplementation(&SendTx{}, TxNameSend, TxTypeSend).
 		RegisterImplementation(&AppTx{}, TxNameApp, TxTypeApp).
-		RegisterImplementation(&PostTx{}, TxNamePost, TxTypePost)
+		RegisterImplementation(&PostTx{}, TxNamePost, TxTypePost).
+		RegisterImplementation(&DonateTx{}, TxNameDonate, TxTypeDonate)
 }
 
 // TxS add json serialization to Tx
@@ -268,6 +272,51 @@ func (tx PostTx) ValidateBasic() abci.Result {
 
 func (tx *PostTx) String() string {
 	return Fmt("PostTx{%v, %v, %v, %v}", tx.Address, tx.Title, tx.Content, tx.Sequence)
+}
+
+//-----------------------------------------------------------------------------
+
+type DonateTx struct {
+        From      data.Bytes       `json:"from"`      //user address
+        To        []byte           `json:"to"`        //post_id
+        Amount     Coins            `json:"amount"`     //
+        Sequence  int              `json:"sequence"`  //sequence
+        Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
+        PubKey    crypto.PubKey    `json:"pub_key"`   // Is present iff Sequence == 0
+}
+
+func (tx *DonateTx) SignBytes(chainID string) []byte {
+        signBytes := wire.BinaryBytes(chainID)
+        sig := tx.Signature
+        tx.Signature = crypto.Signature{}
+        signBytes = append(signBytes, wire.BinaryBytes(tx)...)
+        tx.Signature = sig
+        return signBytes
+}
+
+func (tx *DonateTx) SetSignature(sig crypto.Signature) bool {
+        tx.Signature = sig
+        return true
+}
+
+func (tx DonateTx) ValidateBasic() abci.Result {
+        if len(tx.From) != 20 {
+                return abci.ErrBaseInvalidInput.AppendLog("Invalid address length")
+        }
+        if tx.Sequence <= 0 {
+                return abci.ErrBaseInvalidInput.AppendLog("Sequence must be greater than 0")
+        }
+        if tx.Sequence == 1 && tx.PubKey.Empty() {
+                return abci.ErrBaseInvalidInput.AppendLog("PubKey must be present when Sequence == 1")
+        }
+        if tx.Sequence > 1 && !tx.PubKey.Empty() {
+                return abci.ErrBaseInvalidInput.AppendLog("PubKey must be nil when Sequence > 1")
+        }
+        return abci.OK
+}
+
+func (tx *DonateTx) String() string {
+        return Fmt("DonateTx{%v, %v, %v}", tx.From, tx.To, tx.Sequence)
 }
 
 //-----------------------------------------------------------------------------
