@@ -29,17 +29,20 @@ const (
 	TxTypeSend = byte(0x01)
 	TxTypeApp  = byte(0x02)
 	TxTypePost  = byte(0x03)
+	TxTypeLike  = byte(0x71)
 	TxTypeDonate = byte(0x80)
 	TxNameSend = "send"
 	TxNameApp  = "app"
 	TxNamePost  = "post"
 	TxNameDonate = "donate"
+	TxNameLike = "like"
 )
 
 func (_ *SendTx) AssertIsTx() {}
 func (_ *AppTx) AssertIsTx()  {}
 func (_ *PostTx) AssertIsTx()  {}
 func (_ *DonateTx) AssertIsTx() {}
+func (_ *LikeTx) AssertIsTx()  {}
 
 var txMapper data.Mapper
 
@@ -49,7 +52,8 @@ func init() {
 		RegisterImplementation(&SendTx{}, TxNameSend, TxTypeSend).
 		RegisterImplementation(&AppTx{}, TxNameApp, TxTypeApp).
 		RegisterImplementation(&PostTx{}, TxNamePost, TxTypePost).
-		RegisterImplementation(&DonateTx{}, TxNameDonate, TxTypeDonate)
+		RegisterImplementation(&DonateTx{}, TxNameDonate, TxTypeDonate).
+		RegisterImplementation(&LikeTx{}, TxNameLike, TxTypeLike)
 }
 
 // TxS add json serialization to Tx
@@ -309,6 +313,43 @@ func (tx *DonateTx) String() string {
 }
 
 //-----------------------------------------------------------------------------
+// feature-like
+type LikeTx struct {
+	From      data.Bytes       `json:"from"`      // address
+	To        []byte           `json:"to"`        // post_id
+	Weight    int              `json:"weight"`    // like weight from -10000 to 10000
+	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
+	PubKey    crypto.PubKey    `json:"pub_key"`   // Is present iff Sequence == 0
+}
+
+func (tx *LikeTx) SignBytes(chainID string) []byte {
+	signBytes := wire.BinaryBytes(chainID)
+	sig := tx.Signature
+	tx.Signature = crypto.Signature{}
+	signBytes = append(signBytes, wire.BinaryBytes(tx)...)
+	tx.Signature = sig
+	return signBytes
+}
+
+func (tx *LikeTx) SetSignature(sig crypto.Signature) bool {
+	tx.Signature = sig
+	return true
+}
+
+func (tx LikeTx) ValidateBasic() abci.Result {
+	if len(tx.From) != 20 {
+		return abci.ErrBaseInvalidInput.AppendLog("Invalid address length")
+	}
+	if tx.Weight < -10000 || tx.Weight > 10000 {
+		return abci.ErrBaseInvalidInput.AppendLog("Invalid weight")
+	}
+	return abci.OK
+}
+
+func (tx *LikeTx) String() string {
+	return Fmt("LikeTx{ set %v from %v to %v. (%v, %v) }",
+		tx.Weight, tx.From, tx.To, tx.Signature, tx.PubKey)
+}
 
 func TxID(chainID string, tx Tx) []byte {
 	signBytes := tx.SignBytes(chainID)

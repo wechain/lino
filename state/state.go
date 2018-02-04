@@ -77,6 +77,14 @@ func (s *State) SetPost(pid []byte, post *types.Post) {
 	types.SetPost(s, pid, post)
 }
 
+func (s *State) GetLikesByPostId(post_id []byte) []types.Like {
+	return types.GetLikesByPostId(s, post_id);
+}
+
+func (s *State) AddLike(like types.Like) {
+	types.AddLike(s, like)
+}
+
 func (s *State) CacheWrap() *State {
 	cache := types.NewKVCache(s)
 	return &State{
