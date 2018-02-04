@@ -2,14 +2,13 @@ package types
 
 import (
 	"fmt"
-	"github.com/tendermint/go-wire/data"
 	"github.com/tendermint/go-wire"
 	"bytes"
 	"reflect"
 )
 
 type Like struct {
-	From   data.Bytes `json:"from"`      // address
+	From   []byte `json:"from"`      // address
 	To     []byte     `json:"to"`        // post_id
 	Weight int        `json:"weight"`    // weight
 }
@@ -56,7 +55,7 @@ func AddLike(store KVStore, like Like) {
 	like_id := insertLikeToDb(store, &like)
 	summary := readLikeSummary(store)
 	// insert like to db
-	if !likeExist(store, like, summary) {
+	if !likeExist(store, &like, summary) {
 		// update summary
 		summary.Likes = append(summary.Likes, like_id)
 		updateSummary(store, summary)
@@ -80,7 +79,7 @@ func insertLikeToDb(store KVStore, like *Like) LikeId {
 // 	return likeExist(store, to_insert, summary)
 // }
 
-func likeExist(store KVStore, to_insert Like, summary *LikeSummary) bool {
+func likeExist(store KVStore, to_insert *Like, summary *LikeSummary) bool {
 	for _, like_id := range summary.Likes {
 		like := GetLike(store, like_id)
 		if reflect.DeepEqual(like, to_insert) {

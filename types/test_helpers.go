@@ -128,6 +128,23 @@ func MakeDonateTx(seq int, cost int64, fee int64, to []byte, accsIn PrivAccount)
 	return tx
 }
 
+func MakeLikeTx(weight int, from PrivAccount, post_id []byte, is_like, is_first_time bool) *LikeTx {
+	if is_first_time {
+		return &LikeTx{
+			From:  from.PubKey.Address(),
+			To: post_id,
+			Weight: weight,
+			PubKey: from.PubKey,
+		}
+	} else {
+		return &LikeTx{
+			From:  from.PubKey.Address(),
+			To: post_id,
+			Weight: weight,
+		}
+	}
+}
+
 func SignTx(chainID string, tx *SendTx, accs ...PrivAccount) {
 	signBytes := tx.SignBytes(chainID)
 	for i, _ := range tx.Inputs {

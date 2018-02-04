@@ -1,15 +1,12 @@
 package state
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	abci "github.com/tendermint/abci/types"
-	"github.com/tendermint/tmlibs/log"
-
 	"github.com/lino-network/lino/plugins/ibc"
 	"github.com/lino-network/lino/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/tendermint/tmlibs/log"
+	"testing"
+	abci "github.com/tendermint/abci/types"
 )
 
 //--------------------------------------------------------
@@ -519,4 +516,50 @@ func TestDonateTx(t *testing.T) {
 	endOutputBalance = et.state.GetAccount(et.accOut.Account.PubKey.Address()).Balance
 	assert.True(endOutputBalance.IsEqual(types.Coins{{"mycoin", initBalance + testCost - testFee}}),
 			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", endOutputBalance, initBalance)
+}
+
+func TestLikeTx(t *testing.T) {
+	// set up environment
+	assert := assert.New(t)
+	et := newExecTest()
+	seq := 1
+	et.acc2State(et.accOut)
+	pstTx := types.MakePostTx(seq, et.accOut)
+	pstID := types.PostID(et.accOut.Account.PubKey.Address(), seq)
+	pstSignBytes := pstTx.SignBytes(et.chainID)
+	pstTx.Signature = et.accOut.Sign(pstSignBytes)
+	res := ExecTx(et.state, nil, pstTx, false, nil)
+	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
+
+	// Valid Like
+	tx1 := types.MakeLikeTx(10000, et.accOut, pstID, true, true)
+	signBytes := tx1.SignBytes(et.chainID)
+	tx1.Signature = et.accOut.Sign(signBytes)
+	rst := ExecTx(et.state, nil, tx1, false, nil)
+	assert.True(rst.IsOK(), "LikeTx error: %v", rst)
+	likes := et.state.GetLikesByPostId(pstID)
+	assert.Equal(1, len(likes), "Unexpeted Likes array: %v", likes)
+	assert.Equal(et.accOut.PubKey.Address(), likes[0].From)
+	assert.Equal(pstID, likes[0].To)
+	assert.Equal(10000, likes[0].Weight)
+
+	// Invalid post Id
+	tx1 = types.MakeLikeTx(0, et.accOut, []byte("wrong_pid"), true, false)
+	signBytes = tx1.SignBytes(et.chainID)
+	tx1.Signature = et.accOut.Sign(signBytes)
+	rst = ExecTx(et.state, nil, tx1, false, nil)
+	assert.Equal(abci.ErrBaseUnknownAddress.Code, rst.Code, "ExecTx/Bad PostTx: expected error on tx input with bad sequence")
+	likes = et.state.GetLikesByPostId(pstID)
+	assert.Equal(1, len(likes), "Unexpeted Likes array: %v", likes)
+
+	// Valid Dislike
+	tx1 = types.MakeLikeTx(-10000, et.accOut, pstID, false, false)
+	signBytes = tx1.SignBytes(et.chainID)
+	tx1.Signature = et.accOut.Sign(signBytes)
+	rst = ExecTx(et.state, nil, tx1, false, nil)
+	assert.True(rst.IsOK(), "LikeTx error: %v", rst)
+	likes = et.state.GetLikesByPostId(pstID)
+	assert.Equal(1, len(likes), "Unexpeted Likes array: %v", likes)
+	assert.Equal(pstID, likes[0].To)
+	assert.Equal(-10000, likes[0].Weight)
 }
