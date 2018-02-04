@@ -182,55 +182,57 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 		post := &types.Post {
 			Title: tx.Title,
 			Content: tx.Content,
+			Author: tx.Address,
 			Parent: tx.Parent,
 		}
 		state.SetAccount(tx.Address, acc)
 		state.SetPost(types.PostID(tx.Address, acc.LastPost), post)
 		return abci.NewResultOK(types.TxID(chainID, tx), "")
+
 	case *types.DonateTx:
-        pAcc := state.GetAccount(tx.From)
-		if pAcc == nil {
-			return abci.ErrBaseUnknownAddress
-		}
-		if !tx.PubKey.Empty() {
-			pAcc.PubKey = tx.PubKey
-		}
-		pAcc.Sequence += 1
 		res := tx.ValidateBasic()
 		if res.IsErr() {
 			return res
 		}
-		var txInput []types.TxInput
-		txInput = append(txInput, types.TxInput{Address: tx.From, Coins: tx.Amount, Sequence: pAcc.Sequence, Signature: tx.Signature, PubKey: tx.PubKey})
-		accounts, res := getInputs(state, txInput)
-		if res.IsErr() {
-			return res.PrependLog("in getInputs()")
+        acc := state.GetAccount(tx.Input.Address)
+		if acc == nil {
+			return abci.ErrBaseUnknownAddress
 		}
-		post := state.GetPost(tx.To);
-		// Get or make outputs.
-		var txOutput []types.TxOutput
-		txOutput = append(txOutput, types.TxOutput{Address: []byte(post.Author), Coins: tx.Amount})
-		accounts, res = getOrMakeOutputs(state, accounts, txOutput)
-		if res.IsErr() {
-			return res.PrependLog("in getOrMakeOutputs()")
+		post := state.GetPost(tx.To)
+		if post == nil {
+			// TODO change to unknown post error
+			return abci.ErrBaseUnknownAddress
 		}
-		// Validate inputs and outputs, advanced
+		if !tx.Input.PubKey.Empty() {
+			acc.PubKey = tx.Input.PubKey
+		}
+		// Validate input, advanced
 		signBytes := tx.SignBytes(chainID)
-		inTotal, res := validateInputsAdvanced(accounts, signBytes, txInput)
+		res = validateInputAdvanced(acc, signBytes, tx.Input)
 		if res.IsErr() {
-			return res.PrependLog("in validateInputsAdvanced()")
+			state.logger.Info(cmn.Fmt("validateInputAdvanced failed on %X: %v", tx.Input.Address, res))
+			return res.PrependLog("in validateInputAdvanced()")
 		}
-		outTotal := sumOutputs(txOutput)
-		outPlusAmount := outTotal
-		amount := tx.Amount
-		if amount.IsValid() { // TODO: fix coins.Plus()
-			outPlusAmount = outTotal.Plus(amount)
+		if !tx.Input.Coins.IsGTE(types.Coins{tx.Fee}) {
+			state.logger.Info(cmn.Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
+			return abci.ErrBaseInsufficientFunds.AppendLog(cmn.Fmt("input coins is %v, but fee is %v", tx.Input.Coins, tx.Fee))
 		}
-		if !inTotal.IsEqual(outPlusAmount) {
-			return abci.ErrBaseInvalidOutput.AppendLog(cmn.Fmt("Input total (%v) != output total + amount (%v)", inTotal, outPlusAmount))
+		
+		acc.Balance = acc.Balance.Minus(tx.Input.Coins)
+		acc.Sequence += 1
+		state.SetAccount(tx.Input.Address, acc)
+		if isCheckTx {
+			return abci.OK
 		}
-		adjustByInputs(state, accounts, txInput)
-		adjustByOutputs(state, accounts, txOutput, isCheckTx)
+
+		outAcc := state.GetAccount(post.Author)
+		if outAcc == nil {
+			// TODO change to unknown post
+			return abci.ErrBaseUnknownAddress
+		}
+		outCoin := tx.Input.Coins.Minus(types.Coins{tx.Fee})
+		outAcc.Balance = outAcc.Balance.Plus(outCoin)
+		state.SetAccount(post.Author, outAcc)
 		return abci.NewResultOK(types.TxID(chainID, tx), "")
 
 	default:

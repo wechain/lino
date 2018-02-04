@@ -463,3 +463,60 @@ func TestPostTx(t *testing.T) {
 	endPostSeq = et.state.GetAccount(acc.Account.PubKey.Address()).LastPost
 	assert.Equal(2, endPostSeq)
 }
+
+func TestDonateTx(t *testing.T) {
+	assert := assert.New(t)
+	et := newExecTest()
+
+	pstx := types.MakePostTx(1, et.accOut)
+	signBytes := pstx.SignBytes(et.chainID)
+	pstx.Signature = et.accOut.Sign(signBytes)
+	et.acc2State(et.accOut)
+	initOutputBalance := et.state.GetAccount(et.accOut.Account.PubKey.Address()).Balance
+	initPostSeq := et.state.GetAccount(et.accOut.Account.PubKey.Address()).LastPost
+
+	// Test seq equal to 1
+	res := ExecTx(et.state, nil, pstx, false, nil)
+	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
+	endPostSeq := et.state.GetAccount(et.accOut.Account.PubKey.Address()).LastPost
+	assert.Equal(endPostSeq, initPostSeq + 1)
+
+	// Test valid donate
+	var testCost int64 = 5
+	var testFee int64 = 1
+	var initBalance int64 = 7
+
+	dtx := types.MakeDonateTx(1, testCost, testFee, types.PostID(et.accOut.Account.PubKey.Address(), 1), et.accIn)
+	et.acc2State(et.accIn)
+	et.acc2State(et.accOut)
+	dtxSignBytes := dtx.SignBytes(et.chainID)
+	dtx.Input.Signature = et.accIn.Sign(dtxSignBytes)
+
+	// Execute donate
+	initOutputBalance = et.state.GetAccount(et.accOut.Account.PubKey.Address()).Balance
+	assert.True(initOutputBalance.IsEqual(types.Coins{{"mycoin", initBalance}}),
+			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", initOutputBalance, initBalance)
+	res = ExecTx(et.state, nil, dtx, true, nil)
+	assert.True(res.IsOK(), "ExecTx/Good DonateTx: Expected OK return from ExecTx, Error: %v", res)
+	endInputBalance := et.state.GetAccount(et.accIn.Account.PubKey.Address()).Balance
+	assert.True(endInputBalance.IsEqual(types.Coins{{"mycoin", initBalance - testCost}}),
+			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", endInputBalance, initBalance - testCost)
+
+	endOutputBalance := et.state.GetAccount(et.accOut.Account.PubKey.Address()).Balance
+	assert.True(endOutputBalance.IsEqual(types.Coins{{"mycoin", initBalance}}),
+			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", endOutputBalance, initBalance)
+
+	et.reset()
+	et.acc2State(et.accIn)
+	et.acc2State(et.accOut)
+	res = ExecTx(et.state, nil, pstx, false, nil)
+	res = ExecTx(et.state, nil, dtx, false, nil)
+	assert.True(res.IsOK(), "ExecTx/Good DonateTx: Expected OK return from ExecTx, Error: %v", res)
+	endInputBalance = et.state.GetAccount(et.accIn.Account.PubKey.Address()).Balance
+	assert.True(endInputBalance.IsEqual(types.Coins{{"mycoin", initBalance - testCost}}),
+			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", endInputBalance, initBalance - testCost)
+
+	endOutputBalance = et.state.GetAccount(et.accOut.Account.PubKey.Address()).Balance
+	assert.True(endOutputBalance.IsEqual(types.Coins{{"mycoin", initBalance + testCost - testFee}}),
+			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", endOutputBalance, initBalance)
+}

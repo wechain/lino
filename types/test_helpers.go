@@ -116,6 +116,18 @@ func MakePostTx(seq int, accOut PrivAccount) *PostTx {
 	}
 }
 
+func MakeDonateTx(seq int, cost int64, fee int64, to []byte, accsIn PrivAccount) *DonateTx {
+	tx := &DonateTx{
+		Fee:   Coin{"mycoin", fee},
+		Input: NewTxInput(
+			   	   accsIn.Account.PubKey,
+			       Coins{{"mycoin", cost}},
+			       seq),
+		To:    to,
+	}
+	return tx
+}
+
 func SignTx(chainID string, tx *SendTx, accs ...PrivAccount) {
 	signBytes := tx.SignBytes(chainID)
 	for i, _ := range tx.Inputs {

@@ -278,46 +278,34 @@ func (tx *PostTx) String() string {
 //-----------------------------------------------------------------------------
 
 type DonateTx struct {
-        From      data.Bytes       `json:"from"`      //user address
-        To        []byte           `json:"to"`        //post_id
-        Amount     Coins            `json:"amount"`     //
-        Sequence  int              `json:"sequence"`  //sequence
-        Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-        PubKey    crypto.PubKey    `json:"pub_key"`   // Is present iff Sequence == 0
+	Input     TxInput          `json:"inputTx"` // Hmmm do we want coins?
+    To        []byte           `json:"to"`      //post_id
+    Fee       Coin             `json:"fee"`
 }
 
 func (tx *DonateTx) SignBytes(chainID string) []byte {
-        signBytes := wire.BinaryBytes(chainID)
-        sig := tx.Signature
-        tx.Signature = crypto.Signature{}
-        signBytes = append(signBytes, wire.BinaryBytes(tx)...)
-        tx.Signature = sig
-        return signBytes
+	signBytes := wire.BinaryBytes(chainID)
+	sig := tx.Input.Signature
+	tx.Input.Signature = crypto.Signature{}
+	signBytes = append(signBytes, wire.BinaryBytes(tx)...)
+	tx.Input.Signature = sig
+	return signBytes
 }
 
 func (tx *DonateTx) SetSignature(sig crypto.Signature) bool {
-        tx.Signature = sig
-        return true
+    tx.Input.Signature = sig
+    return true
 }
 
 func (tx DonateTx) ValidateBasic() abci.Result {
-        if len(tx.From) != 20 {
-                return abci.ErrBaseInvalidInput.AppendLog("Invalid address length")
-        }
-        if tx.Sequence <= 0 {
-                return abci.ErrBaseInvalidInput.AppendLog("Sequence must be greater than 0")
-        }
-        if tx.Sequence == 1 && tx.PubKey.Empty() {
-                return abci.ErrBaseInvalidInput.AppendLog("PubKey must be present when Sequence == 1")
-        }
-        if tx.Sequence > 1 && !tx.PubKey.Empty() {
-                return abci.ErrBaseInvalidInput.AppendLog("PubKey must be nil when Sequence > 1")
-        }
-        return abci.OK
+	if err := tx.Input.ValidateBasic(); !err.IsErr() {
+		return err
+	}
+	return abci.OK
 }
 
 func (tx *DonateTx) String() string {
-        return Fmt("DonateTx{%v, %v, %v}", tx.From, tx.To, tx.Sequence)
+        return Fmt("DonateTx{%v -> %v, %v}", tx.Input, tx.To, tx.Fee)
 }
 
 //-----------------------------------------------------------------------------
