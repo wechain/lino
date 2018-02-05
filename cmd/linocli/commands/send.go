@@ -62,8 +62,8 @@ func doSendTx(cmd *cobra.Command, args []string) error {
 	}
 
 	// Wrap and add signer
-	send := &SendTx{
-		chainID: commands.GetChainID(),
+	send := &ttx.CliSendTx{
+		ChainID: commands.GetChainID(),
 		Tx:      tx,
 	}
 	send.AddSigner(txcmd.GetSigner())
@@ -198,9 +198,9 @@ func ReadAppTxFlags() (gas int64, fee btypes.Coin, txInput ttx.TxInput, err erro
 }
 
 // WrapAppTx wraps the transaction with chain id
-func WrapAppTx(tx *ttx.AppTx) *AppTx {
-	return &AppTx{
-		chainID: commands.GetChainID(),
+func WrapAppTx(tx *ttx.AppTx) *ttx.CliAppTx {
+	return &ttx.CliAppTx{
+		ChainID: commands.GetChainID(),
 		Tx:      tx,
 	}
 }

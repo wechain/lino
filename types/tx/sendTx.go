@@ -1,31 +1,71 @@
-package commands
+package transaction
 
 import (
+	"bytes"
+
 	"github.com/pkg/errors"
-	ttx "github.com/lino-network/lino/types/tx"
-	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
+	"github.com/lino-network/lino/types"
+	. "github.com/tendermint/tmlibs/common"
 	keys "github.com/tendermint/go-crypto/keys"
-	wire "github.com/tendermint/go-wire"
 )
 
 type SendTx struct {
-	chainID string
-	signers []crypto.PubKey
-	Tx      *ttx.SendTx
+	Gas     int64      `json:"gas"` // Gas
+	Fee     types.Coin `json:"fee"` // Fee
+	Inputs  []TxInput  `json:"inputs"`
+	Outputs []TxOutput `json:"outputs"`
 }
 
-var _ keys.Signable = &SendTx{}
+func (tx *SendTx) SignBytes(chainID string) []byte {
+	signBytes := wire.BinaryBytes(chainID)
+	sigz := make([]crypto.Signature, len(tx.Inputs))
+	for i := range tx.Inputs {
+		sigz[i] = tx.Inputs[i].Signature
+		tx.Inputs[i].Signature = crypto.Signature{}
+	}
+	signBytes = append(signBytes, wire.BinaryBytes(tx)...)
+	for i := range tx.Inputs {
+		tx.Inputs[i].Signature = sigz[i]
+	}
+	return signBytes
+}
+
+func (tx *SendTx) SetSignature(addr []byte, sig crypto.Signature) bool {
+	for i, input := range tx.Inputs {
+		if bytes.Equal(input.Address, addr) {
+			tx.Inputs[i].Signature = sig
+			return true
+		}
+	}
+	return false
+}
+
+func (tx *SendTx) String() string {
+	return Fmt("SendTx{%v/%v %v->%v}", tx.Gas, tx.Fee, tx.Inputs, tx.Outputs)
+}
+
+// ============================================================================
+// CliSendTx Application transaction structure for client
+type CliSendTx struct {
+	ChainID string
+	signers []crypto.PubKey
+	Tx      *SendTx
+}
+
+var _ keys.Signable = &CliSendTx{}
 
 // SignBytes returned the unsigned bytes, needing a signature
-func (s *SendTx) SignBytes() []byte {
-	return s.Tx.SignBytes(s.chainID)
+func (s *CliSendTx) SignBytes() []byte {
+	return s.Tx.SignBytes(s.ChainID)
 }
 
 // Sign will add a signature and pubkey.
 //
 // Depending on the Signable, one may be able to call this multiple times for multisig
 // Returns error if called with invalid data or too many times
-func (s *SendTx) Sign(pubkey crypto.PubKey, sig crypto.Signature) error {
+func (s *CliSendTx) Sign(pubkey crypto.PubKey, sig crypto.Signature) error {
 	addr := pubkey.Address()
 	set := s.Tx.SetSignature(addr, sig)
 	if !set {
@@ -38,7 +78,7 @@ func (s *SendTx) Sign(pubkey crypto.PubKey, sig crypto.Signature) error {
 // Signers will return the public key(s) that signed if the signature
 // is valid, or an error if there is any issue with the signature,
 // including if there are no signatures
-func (s *SendTx) Signers() ([]crypto.PubKey, error) {
+func (s *CliSendTx) Signers() ([]crypto.PubKey, error) {
 	if len(s.signers) == 0 {
 		return nil, errors.New("No signatures on SendTx")
 	}
@@ -47,21 +87,21 @@ func (s *SendTx) Signers() ([]crypto.PubKey, error) {
 
 // TxBytes returns the transaction data as well as all signatures
 // It should return an error if Sign was never called
-func (s *SendTx) TxBytes() ([]byte, error) {
+func (s *CliSendTx) TxBytes() ([]byte, error) {
 	// TODO: verify it is signed
 
 	// Code and comment from: basecoin/cmd/basecoin/commands/tx.go
 	// Don't you hate having to do this?
 	// How many times have I lost an hour over this trick?!
 	txBytes := wire.BinaryBytes(struct {
-		ttx.Tx `json:"unwrap"`
+		Tx `json:"unwrap"`
 	}{s.Tx})
 	return txBytes, nil
 }
 
 // AddSigner sets address and pubkey info on the tx based on the key that
 // will be used for signing
-func (s *SendTx) AddSigner(pk crypto.PubKey) {
+func (s *CliSendTx) AddSigner(pk crypto.PubKey) {
 	// get addr if available
 	var addr []byte
 	if !pk.Empty() {
@@ -78,8 +118,8 @@ func (s *SendTx) AddSigner(pk crypto.PubKey) {
 
 // TODO: this should really be in the basecoin.types SendTx,
 // but that code is too ugly now, needs refactor..
-func (s *SendTx) ValidateBasic() error {
-	if s.chainID == "" {
+func (s *CliSendTx) ValidateBasic() error {
+	if s.ChainID == "" {
 		return errors.New("No chain-id specified")
 	}
 	for _, in := range s.Tx.Inputs {

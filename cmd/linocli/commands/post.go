@@ -51,8 +51,8 @@ func doPostTx(cmd *cobra.Command, args []string) error {
 	}
 
 	// Wrap and add signer
-	post := &PostTx{
-		chainID: commands.GetChainID(),
+	post := &ttx.CliPostTx{
+		ChainID: commands.GetChainID(),
 		Tx:      tx,
 	}
 	post.AddSigner(txcmd.GetSigner())
