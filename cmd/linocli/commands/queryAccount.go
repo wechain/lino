@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/light-client/proofs"
 
 	btypes "github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 )
 
 var AccountQueryCmd = &cobra.Command{
@@ -43,7 +44,7 @@ type BaseTxPresenter struct {
 }
 
 func (_ BaseTxPresenter) ParseData(raw []byte) (interface{}, error) {
-	var tx btypes.TxS
+	var tx ttx.TxS
 	err := wire.ReadBinaryBytes(raw, &tx)
 	return tx, err
 }

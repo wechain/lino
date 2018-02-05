@@ -1,4 +1,4 @@
-package types
+package transaction
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
 	"github.com/tendermint/go-wire/data"
+	"github.com/lino-network/lino/types"
 	. "github.com/tendermint/tmlibs/common"
 )
 
@@ -77,7 +78,7 @@ func (p *TxS) UnmarshalJSON(data []byte) (err error) {
 
 type TxInput struct {
 	Address   data.Bytes       `json:"address"`   // Hash of the PubKey
-	Coins     Coins            `json:"coins"`     //
+	Coins     types.Coins      `json:"coins"`     //
 	Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed TxInput
 	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
 	PubKey    crypto.PubKey    `json:"pub_key"`   // Is present iff Sequence == 0
@@ -109,7 +110,7 @@ func (txIn TxInput) String() string {
 	return Fmt("TxInput{%X,%v,%v,%v,%v}", txIn.Address, txIn.Coins, txIn.Sequence, txIn.Signature, txIn.PubKey)
 }
 
-func NewTxInput(pubKey crypto.PubKey, coins Coins, sequence int) TxInput {
+func NewTxInput(pubKey crypto.PubKey, coins types.Coins, sequence int) TxInput {
 	input := TxInput{
 		Address:  pubKey.Address(),
 		Coins:    coins,
@@ -125,7 +126,7 @@ func NewTxInput(pubKey crypto.PubKey, coins Coins, sequence int) TxInput {
 
 type TxOutput struct {
 	Address data.Bytes `json:"address"` // Hash of the PubKey
-	Coins   Coins      `json:"coins"`   //
+	Coins   types.Coins      `json:"coins"`   //
 }
 
 // An output destined for another chain may be formatted as `chainID/address`.
@@ -172,7 +173,7 @@ func (txOut TxOutput) String() string {
 
 type SendTx struct {
 	Gas     int64      `json:"gas"` // Gas
-	Fee     Coin       `json:"fee"` // Fee
+	Fee     types.Coin `json:"fee"` // Fee
 	Inputs  []TxInput  `json:"inputs"`
 	Outputs []TxOutput `json:"outputs"`
 }
@@ -209,7 +210,7 @@ func (tx *SendTx) String() string {
 
 type AppTx struct {
 	Gas   int64           `json:"gas"`   // Gas
-	Fee   Coin            `json:"fee"`   // Fee
+	Fee   types.Coin            `json:"fee"`   // Fee
 	Name  string          `json:"type"`  // Which plugin
 	Input TxInput         `json:"input"` // Hmmm do we want coins?
 	Data  json.RawMessage `json:"data"`
@@ -284,7 +285,7 @@ func (tx *PostTx) String() string {
 type DonateTx struct {
 	Input     TxInput          `json:"inputTx"` // Hmmm do we want coins?
     To        []byte           `json:"to"`      //post_id
-    Fee       Coin             `json:"fee"`
+    Fee       types.Coin       `json:"fee"`
 }
 
 func (tx *DonateTx) SignBytes(chainID string) []byte {

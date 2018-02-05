@@ -1,4 +1,4 @@
-package types
+package transaction
 
 import (
 	"encoding/hex"
@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	data "github.com/tendermint/go-wire/data"
+	"github.com/lino-network/lino/types"
 )
 
 var chainID string = "test_chain"
@@ -15,27 +16,27 @@ var chainID string = "test_chain"
 func TestSendTxSignable(t *testing.T) {
 	sendTx := &SendTx{
 		Gas: 222,
-		Fee: Coin{"", 111},
+		Fee: types.Coin{"", 111},
 		Inputs: []TxInput{
 			TxInput{
 				Address:  []byte("input1"),
-				Coins:    Coins{{"", 12345}},
+				Coins:    types.Coins{{"", 12345}},
 				Sequence: 67890,
 			},
 			TxInput{
 				Address:  []byte("input2"),
-				Coins:    Coins{{"", 111}},
+				Coins:    types.Coins{{"", 111}},
 				Sequence: 222,
 			},
 		},
 		Outputs: []TxOutput{
 			TxOutput{
 				Address: []byte("output1"),
-				Coins:   Coins{{"", 333}},
+				Coins:   types.Coins{{"", 333}},
 			},
 			TxOutput{
 				Address: []byte("output2"),
-				Coins:   Coins{{"", 444}},
+				Coins:   types.Coins{{"", 444}},
 			},
 		},
 	}
@@ -50,11 +51,11 @@ func TestSendTxSignable(t *testing.T) {
 func TestAppTxSignable(t *testing.T) {
 	callTx := &AppTx{
 		Gas:  222,
-		Fee:  Coin{"", 111},
+		Fee:  types.Coin{"", 111},
 		Name: "X",
 		Input: TxInput{
 			Address:  []byte("input1"),
-			Coins:    Coins{{"", 12345}},
+			Coins:    types.Coins{{"", 12345}},
 			Sequence: 67890,
 		},
 		Data: []byte("data1"),
@@ -105,14 +106,14 @@ func TestSendTxJSON(t *testing.T) {
 	// Construct a SendTx signature
 	tx := &SendTx{
 		Gas: 1,
-		Fee: Coin{"foo", 2},
+		Fee: types.Coin{"foo", 2},
 		Inputs: []TxInput{
-			NewTxInput(test1PrivAcc.PubKey, Coins{{"foo", 10}}, 1),
+			NewTxInput(test1PrivAcc.PubKey, types.Coins{{"foo", 10}}, 1),
 		},
 		Outputs: []TxOutput{
 			TxOutput{
 				Address: test2PrivAcc.PubKey.Address(),
-				Coins:   Coins{{"foo", 8}},
+				Coins:   types.Coins{{"foo", 8}},
 			},
 		},
 	}
@@ -166,7 +167,7 @@ func TestSendTxIBC(t *testing.T) {
 	slash, err := hex.DecodeString("F40ECECEA86F29D0FDF2980EF72F1708687BD4BF")
 	require.Nil(err)
 
-	coins := Coins{{"atom", 5}}
+	coins := types.Coins{{"atom", 5}}
 
 	addrs := []struct {
 		addr  []byte

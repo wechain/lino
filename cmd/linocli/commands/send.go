@@ -15,6 +15,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	btypes "github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 )
 
 //-------------------------
@@ -48,7 +49,7 @@ func init() {
 // runDemo is an example of how to make a tx
 func doSendTx(cmd *cobra.Command, args []string) error {
 	// load data from json or flags
-	tx := new(btypes.SendTx)
+	tx := new(ttx.SendTx)
 	found, err := txcmd.LoadJSON(tx)
 	if err != nil {
 		return err
@@ -77,7 +78,7 @@ func doSendTx(cmd *cobra.Command, args []string) error {
 	return txcmd.OutputTx(bres)
 }
 
-func readSendTxFlags(tx *btypes.SendTx) error {
+func readSendTxFlags(tx *ttx.SendTx) error {
 	// parse to address
 	to, err := ParseChainAddress(viper.GetString(FlagTo))
 	if err != nil {
@@ -98,11 +99,11 @@ func readSendTxFlags(tx *btypes.SendTx) error {
 	tx.Gas = viper.GetInt64(FlagGas)
 
 	// craft the inputs and outputs
-	tx.Inputs = []btypes.TxInput{{
+	tx.Inputs = []ttx.TxInput{{
 		Coins:    amountCoins,
 		Sequence: viper.GetInt(FlagSequence),
 	}}
-	tx.Outputs = []btypes.TxOutput{{
+	tx.Outputs = []ttx.TxOutput{{
 		Address: to,
 		Coins:   amountCoins,
 	}}
@@ -140,7 +141,7 @@ func ParseChainAddress(toFlag string) ([]byte, error) {
 // AppTx
 
 // BroadcastAppTx wraps, signs, and executes an app tx basecoin transaction
-func BroadcastAppTx(tx *btypes.AppTx) (*ctypes.ResultBroadcastTxCommit, error) {
+func BroadcastAppTx(tx *ttx.AppTx) (*ctypes.ResultBroadcastTxCommit, error) {
 
 	// Sign if needed and post to the node.  This it the work-horse
 	return txcmd.SignAndPostTx(WrapAppTx(tx))
@@ -156,7 +157,7 @@ func AddAppTxFlags(fs *flag.FlagSet) {
 
 // ReadAppTxFlags reads in the standard flags
 // your command should parse info to set tx.Name and tx.Data
-func ReadAppTxFlags() (gas int64, fee btypes.Coin, txInput btypes.TxInput, err error) {
+func ReadAppTxFlags() (gas int64, fee btypes.Coin, txInput ttx.TxInput, err error) {
 
 	// Set the gas
 	gas = viper.GetInt64(FlagGas)
@@ -184,7 +185,7 @@ func ReadAppTxFlags() (gas int64, fee btypes.Coin, txInput btypes.TxInput, err e
 	}
 
 	// set the output
-	txInput = btypes.TxInput{
+	txInput = ttx.TxInput{
 		Coins:    amount,
 		Sequence: viper.GetInt(FlagSequence),
 		Address:  addr,
@@ -197,7 +198,7 @@ func ReadAppTxFlags() (gas int64, fee btypes.Coin, txInput btypes.TxInput, err e
 }
 
 // WrapAppTx wraps the transaction with chain id
-func WrapAppTx(tx *btypes.AppTx) *AppTx {
+func WrapAppTx(tx *ttx.AppTx) *AppTx {
 	return &AppTx{
 		chainID: commands.GetChainID(),
 		Tx:      tx,

@@ -7,6 +7,7 @@ import (
 	"github.com/tendermint/tmlibs/log"
 	"testing"
 	abci "github.com/tendermint/abci/types"
+	ttx "github.com/lino-network/lino/types/tx"
 )
 
 //--------------------------------------------------------
@@ -28,12 +29,12 @@ func newExecTest() *execTest {
 	return et
 }
 
-func (et *execTest) signTx(tx *types.SendTx, accsIn ...types.PrivAccount) {
-	types.SignTx(et.chainID, tx, accsIn...)
+func (et *execTest) signTx(tx *ttx.SendTx, accsIn ...types.PrivAccount) {
+	ttx.SignTx(et.chainID, tx, accsIn...)
 }
 
 // returns the final balance and expected balance for input and output accounts
-func (et *execTest) exec(tx *types.SendTx, checkTx bool) (res abci.Result, inGot, inExp, outGot, outExp types.Coins) {
+func (et *execTest) exec(tx *ttx.SendTx, checkTx bool) (res abci.Result, inGot, inExp, outGot, outExp types.Coins) {
 	initBalIn := et.state.GetAccount(et.accIn.Account.PubKey.Address()).Balance
 	initBalOut := et.state.GetAccount(et.accOut.Account.PubKey.Address()).Balance
 
@@ -53,8 +54,8 @@ func (et *execTest) acc2State(accs ...types.PrivAccount) {
 
 //reset everything. state is empty
 func (et *execTest) reset() {
-	et.accIn = types.MakeAcc("foo")
-	et.accOut = types.MakeAcc("bar")
+	et.accIn = ttx.MakeAcc("foo")
+	et.accOut = ttx.MakeAcc("bar")
 
 	et.store = types.NewMemKVStore()
 	et.state = NewState(et.store)
@@ -79,7 +80,7 @@ func TestGetInputs(t *testing.T) {
 
 	//test getInputs for registered, non-registered account
 	et.reset()
-	inputs := types.Accs2TxInputs(1, et.accIn)
+	inputs := ttx.Accs2TxInputs(1, et.accIn)
 	acc, res = getInputs(et.state, inputs)
 	assert.True(res.IsErr(), "getInputs: expected error when using getInput with non-registered Input")
 
@@ -90,7 +91,7 @@ func TestGetInputs(t *testing.T) {
 	//test sending duplicate accounts
 	et.reset()
 	et.acc2State(et.accIn, et.accIn, et.accIn)
-	inputs = types.Accs2TxInputs(1, et.accIn, et.accIn, et.accIn)
+	inputs = ttx.Accs2TxInputs(1, et.accIn, et.accIn, et.accIn)
 	acc, res = getInputs(et.state, inputs)
 	assert.True(res.IsErr(), "getInputs: expected error when sending duplicate accounts")
 }
@@ -106,14 +107,14 @@ func TestGetOrMakeOutputs(t *testing.T) {
 
 	//test sending duplicate accounts
 	et.reset()
-	outputs := types.Accs2TxOutputs(et.accIn, et.accIn, et.accIn)
+	outputs := ttx.Accs2TxOutputs(et.accIn, et.accIn, et.accIn)
 	_, res = getOrMakeOutputs(et.state, nil, outputs)
 	assert.True(res.IsErr(), "getOrMakeOutputs: expected error when sending duplicate accounts")
 
 	//test sending to existing/new account
 	et.reset()
-	outputs1 := types.Accs2TxOutputs(et.accIn)
-	outputs2 := types.Accs2TxOutputs(et.accOut)
+	outputs1 := ttx.Accs2TxOutputs(et.accIn)
+	outputs2 := ttx.Accs2TxOutputs(et.accOut)
 
 	et.acc2State(et.accIn)
 	_, res = getOrMakeOutputs(et.state, nil, outputs1)
@@ -133,7 +134,7 @@ func TestValidateInputsBasic(t *testing.T) {
 	et := newExecTest()
 
 	//validate input basic
-	inputs := types.Accs2TxInputs(1, et.accIn)
+	inputs := ttx.Accs2TxInputs(1, et.accIn)
 	res := validateInputsBasic(inputs)
 	assert.True(res.IsOK(), "validateInputsBasic: expected no error on good tx input. Error: %v", res.Error())
 
@@ -148,12 +149,12 @@ func TestValidateInputsAdvanced(t *testing.T) {
 	et := newExecTest()
 
 	//create three temp accounts for the test
-	accIn1 := types.MakeAcc("foox")
-	accIn2 := types.MakeAcc("fooy")
-	accIn3 := types.MakeAcc("fooz")
+	accIn1 := ttx.MakeAcc("foox")
+	accIn2 := ttx.MakeAcc("fooy")
+	accIn3 := ttx.MakeAcc("fooz")
 
 	//validate inputs advanced
-	tx := types.MakeSendTx(1, et.accOut, accIn1, accIn2, accIn3)
+	tx := ttx.MakeSendTx(1, et.accOut, accIn1, accIn2, accIn3)
 
 	et.acc2State(accIn1, accIn2, accIn3, et.accOut)
 	accMap, res := getInputs(et.state, tx.Inputs)
@@ -182,7 +183,7 @@ func TestValidateInputAdvanced(t *testing.T) {
 	et := newExecTest()
 
 	//validate input advanced
-	tx := types.MakeSendTx(1, et.accOut, et.accIn)
+	tx := ttx.MakeSendTx(1, et.accOut, et.accIn)
 
 	et.acc2State(et.accIn, et.accOut)
 	signBytes := tx.SignBytes(et.chainID)
@@ -216,7 +217,7 @@ func TestValidateOutputsAdvanced(t *testing.T) {
 	et := newExecTest()
 
 	//validateOutputsBasic
-	tx := types.Accs2TxOutputs(et.accIn)
+	tx := ttx.Accs2TxOutputs(et.accIn)
 	res := validateOutputsBasic(tx)
 	assert.True(res.IsOK(), "validateOutputsBasic: expected no error on good tx output. Error: %v", res.Error())
 
@@ -229,10 +230,10 @@ func TestValidatePostAdvanced(t *testing.T) {
 	assert := assert.New(t)
 	et := newExecTest()
 
-	acc := types.MakeAcc("post")
+	acc := ttx.MakeAcc("post")
 
 	//validatePostAdvanced
-	tx := types.MakePostTx(1, acc)
+	tx := ttx.MakePostTx(1, acc)
 	signBytes := tx.SignBytes(et.chainID)
 
 	//unsigned case
@@ -256,7 +257,7 @@ func TestSumOutput(t *testing.T) {
 	et := newExecTest()
 
 	//SumOutput
-	tx := types.Accs2TxOutputs(et.accIn, et.accOut)
+	tx := ttx.Accs2TxOutputs(et.accIn, et.accOut)
 	total := sumOutputs(tx)
 	assert.True(total.IsEqual(tx[0].Coins.Plus(tx[1].Coins)), "sumOutputs: total coins are not equal")
 }
@@ -271,8 +272,8 @@ func TestAdjustBy(t *testing.T) {
 	initBalOut := et.accOut.Account.Balance
 	et.acc2State(et.accIn, et.accOut)
 
-	txIn := types.Accs2TxInputs(1, et.accIn)
-	txOut := types.Accs2TxOutputs(et.accOut)
+	txIn := ttx.Accs2TxInputs(1, et.accIn)
+	txOut := ttx.Accs2TxOutputs(et.accOut)
 	accMap, _ := getInputs(et.state, txIn)
 	accMap, _ = getOrMakeOutputs(et.state, accMap, txOut)
 
@@ -296,7 +297,7 @@ func TestSendTx(t *testing.T) {
 	et := newExecTest()
 
 	//ExecTx
-	tx := types.MakeSendTx(1, et.accOut, et.accIn)
+	tx := ttx.MakeSendTx(1, et.accOut, et.accIn)
 	et.acc2State(et.accIn)
 	et.acc2State(et.accOut)
 	et.signTx(tx, et.accIn)
@@ -339,7 +340,7 @@ func TestSendTxIBC(t *testing.T) {
 
 	//ExecTx
 	chainID2 := "otherchain"
-	tx := types.MakeSendTx(1, et.accOut, et.accIn)
+	tx := ttx.MakeSendTx(1, et.accOut, et.accIn)
 	dstAddress := tx.Outputs[0].Address
 	tx.Outputs[0].Address = []byte(chainID2 + "/" + string(tx.Outputs[0].Address))
 	et.acc2State(et.accIn)
@@ -379,7 +380,7 @@ func TestPostTx(t *testing.T) {
 	assert := assert.New(t)
 	et := newExecTest()
 
-	tx := types.MakePostTx(1, et.accOut)
+	tx := ttx.MakePostTx(1, et.accOut)
 	signBytes := tx.SignBytes(et.chainID)
 	tx.Signature = et.accOut.Sign(signBytes)
 	//ExecTx
@@ -394,7 +395,7 @@ func TestPostTx(t *testing.T) {
 	assert.Equal(endPostSeq, initPostSeq + 1)
 
 	// Test seq larger than 1
-	tx = types.MakePostTx(2, et.accOut)
+	tx = ttx.MakePostTx(2, et.accOut)
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = et.accOut.Sign(signBytes)
 	initPostSeq = et.state.GetAccount(et.accOut.Account.PubKey.Address()).LastPost
@@ -405,8 +406,8 @@ func TestPostTx(t *testing.T) {
 	assert.Equal(endPostSeq, initPostSeq + 1)
 
 	// First post
-	acc := types.MakeAcc("post")
-	tx = types.MakePostTx(1, acc)
+	acc := ttx.MakeAcc("post")
+	tx = ttx.MakePostTx(1, acc)
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = acc.Sign(signBytes)
 	preAcc := et.state.GetAccount(acc.Account.PubKey.Address())
@@ -418,7 +419,7 @@ func TestPostTx(t *testing.T) {
 	assert.Equal(1, endPostSeq)
 
 	// Test comment
-	tx = types.MakePostTx(2, acc)
+	tx = ttx.MakePostTx(2, acc)
 	tx.Parent = types.PostID(acc.Account.PubKey.Address(), 1)
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = acc.Sign(signBytes)
@@ -429,7 +430,7 @@ func TestPostTx(t *testing.T) {
 	assert.Equal(2, endPostSeq)
 
 	// Invalid seq no
-	tx = types.MakePostTx(100, et.accOut)
+	tx = ttx.MakePostTx(100, et.accOut)
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = et.accOut.Sign(signBytes)
 	initPostSeq = et.state.GetAccount(et.accOut.Account.PubKey.Address()).LastPost
@@ -440,7 +441,7 @@ func TestPostTx(t *testing.T) {
 	assert.Equal(endPostSeq, initPostSeq)
 
 	// Unsigned post
-	tx = types.MakePostTx(3, et.accOut)
+	tx = ttx.MakePostTx(3, et.accOut)
 	signBytes = tx.SignBytes(et.chainID)
 	initPostSeq = et.state.GetAccount(et.accOut.Account.PubKey.Address()).LastPost
 
@@ -450,7 +451,7 @@ func TestPostTx(t *testing.T) {
 	assert.Equal(endPostSeq, initPostSeq)
 
 	// Invalid comment
-	tx = types.MakePostTx(2, acc)
+	tx = ttx.MakePostTx(2, acc)
 	tx.Parent = []byte("parent")
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = acc.Sign(signBytes)
@@ -465,7 +466,7 @@ func TestDonateTx(t *testing.T) {
 	assert := assert.New(t)
 	et := newExecTest()
 
-	pstx := types.MakePostTx(1, et.accOut)
+	pstx := ttx.MakePostTx(1, et.accOut)
 	signBytes := pstx.SignBytes(et.chainID)
 	pstx.Signature = et.accOut.Sign(signBytes)
 	et.acc2State(et.accOut)
@@ -483,7 +484,7 @@ func TestDonateTx(t *testing.T) {
 	var testFee int64 = 1
 	var initBalance int64 = 7
 
-	dtx := types.MakeDonateTx(1, testCost, testFee, types.PostID(et.accOut.Account.PubKey.Address(), 1), et.accIn)
+	dtx := ttx.MakeDonateTx(1, testCost, testFee, types.PostID(et.accOut.Account.PubKey.Address(), 1), et.accIn)
 	et.acc2State(et.accIn)
 	et.acc2State(et.accOut)
 	dtxSignBytes := dtx.SignBytes(et.chainID)
@@ -524,7 +525,7 @@ func TestLikeTx(t *testing.T) {
 	et := newExecTest()
 	seq := 1
 	et.acc2State(et.accOut)
-	pstTx := types.MakePostTx(seq, et.accOut)
+	pstTx := ttx.MakePostTx(seq, et.accOut)
 	pstID := types.PostID(et.accOut.Account.PubKey.Address(), seq)
 	pstSignBytes := pstTx.SignBytes(et.chainID)
 	pstTx.Signature = et.accOut.Sign(pstSignBytes)
@@ -532,7 +533,7 @@ func TestLikeTx(t *testing.T) {
 	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
 
 	// Valid Like
-	tx1 := types.MakeLikeTx(10000, et.accOut, pstID, true, true)
+	tx1 := ttx.MakeLikeTx(10000, et.accOut, pstID, true, true)
 	signBytes := tx1.SignBytes(et.chainID)
 	tx1.Signature = et.accOut.Sign(signBytes)
 	rst := ExecTx(et.state, nil, tx1, false, nil)
@@ -544,7 +545,7 @@ func TestLikeTx(t *testing.T) {
 	assert.Equal(10000, likes[0].Weight)
 
 	// Invalid post Id
-	tx1 = types.MakeLikeTx(0, et.accOut, []byte("wrong_pid"), true, false)
+	tx1 = ttx.MakeLikeTx(0, et.accOut, []byte("wrong_pid"), true, false)
 	signBytes = tx1.SignBytes(et.chainID)
 	tx1.Signature = et.accOut.Sign(signBytes)
 	rst = ExecTx(et.state, nil, tx1, false, nil)
@@ -553,7 +554,7 @@ func TestLikeTx(t *testing.T) {
 	assert.Equal(1, len(likes), "Unexpeted Likes array: %v", likes)
 
 	// Valid Dislike
-	tx1 = types.MakeLikeTx(-10000, et.accOut, pstID, false, false)
+	tx1 = ttx.MakeLikeTx(-10000, et.accOut, pstID, false, false)
 	signBytes = tx1.SignBytes(et.chainID)
 	tx1.Signature = et.accOut.Sign(signBytes)
 	rst = ExecTx(et.state, nil, tx1, false, nil)

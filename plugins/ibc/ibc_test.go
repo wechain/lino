@@ -18,6 +18,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 	tm "github.com/tendermint/tendermint/types"
 )
 
@@ -32,7 +33,7 @@ func genGenesisDoc(chainID string, numVals int) (*tm.GenesisDoc, []types.PrivAcc
 
 	for i := 0; i < numVals; i++ {
 		name := cmn.Fmt("%v_val_%v", chainID, i)
-		privAcc := types.PrivAccountFromSecret(name)
+		privAcc := ttx.PrivAccountFromSecret(name)
 		genDoc.Validators = append(genDoc.Validators, tm.GenesisValidator{
 			PubKey: privAcc.PubKey,
 			Amount: 1,

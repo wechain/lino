@@ -7,15 +7,16 @@ import (
 
 	"github.com/lino-network/lino/plugins/ibc"
 	"github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 )
 
 // If the tx is invalid, a TMSP error will be returned.
-func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc events.Fireable) abci.Result {
+func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc events.Fireable) abci.Result {
 	chainID := state.GetChainID()
 
 	// Exec tx
 	switch tx := tx.(type) {
-	case *types.SendTx:
+	case *ttx.SendTx:
 		// Validate inputs and outputs, basic
 		res := validateInputsBasic(tx.Inputs)
 		if res.IsErr() {
@@ -74,9 +75,9 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 			}
 		*/
 
-		return abci.NewResultOK(types.TxID(chainID, tx), "")
+		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
-	case *types.AppTx:
+	case *ttx.AppTx:
 		// Validate input, basic
 		res := tx.Input.ValidateBasic()
 		if res.IsErr() {
@@ -154,7 +155,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 		}
 		return res
 
-	case *types.PostTx:
+	case *ttx.PostTx:
 		res := tx.ValidateBasic()
 		if res.IsErr() {
 			return res
@@ -187,9 +188,9 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 		}
 		state.SetAccount(tx.Address, acc)
 		state.SetPost(types.PostID(tx.Address, acc.LastPost), post)
-		return abci.NewResultOK(types.TxID(chainID, tx), "")
+		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
-	case *types.DonateTx:
+	case *ttx.DonateTx:
 		res := tx.ValidateBasic()
 		if res.IsErr() {
 			return res
@@ -233,9 +234,9 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 		outCoin := tx.Input.Coins.Minus(types.Coins{tx.Fee})
 		outAcc.Balance = outAcc.Balance.Plus(outCoin)
 		state.SetAccount(post.Author, outAcc)
-		return abci.NewResultOK(types.TxID(chainID, tx), "")
+		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
-	case *types.LikeTx:
+	case *ttx.LikeTx:
 		res := tx.ValidateBasic()
 		if res.IsErr() {
 			return res
@@ -267,7 +268,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 			Weight : tx.Weight,
 		}
 		state.AddLike(like)
-		return abci.NewResultOK(types.TxID(chainID, tx), "")
+		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 	default:
 		return abci.ErrBaseEncodingError.SetLog("Unknown tx type")
 	}
@@ -277,7 +278,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx types.Tx, isCheckTx bool, evc e
 // The accounts from the TxInputs must either already have
 // crypto.PubKey.(type) != nil, (it must be known),
 // or it must be specified in the TxInput.
-func getInputs(state types.AccountGetter, ins []types.TxInput) (map[string]*types.Account, abci.Result) {
+func getInputs(state types.AccountGetter, ins []ttx.TxInput) (map[string]*types.Account, abci.Result) {
 	accounts := map[string]*types.Account{}
 	for _, in := range ins {
 		// Account shouldn't be duplicated
@@ -298,7 +299,7 @@ func getInputs(state types.AccountGetter, ins []types.TxInput) (map[string]*type
 	return accounts, abci.OK
 }
 
-func getOrMakeOutputs(state types.AccountGetter, accounts map[string]*types.Account, outs []types.TxOutput) (map[string]*types.Account, abci.Result) {
+func getOrMakeOutputs(state types.AccountGetter, accounts map[string]*types.Account, outs []ttx.TxOutput) (map[string]*types.Account, abci.Result) {
 	if accounts == nil {
 		accounts = make(map[string]*types.Account)
 	}
@@ -326,7 +327,7 @@ func getOrMakeOutputs(state types.AccountGetter, accounts map[string]*types.Acco
 }
 
 // Validate inputs basic structure
-func validateInputsBasic(ins []types.TxInput) (res abci.Result) {
+func validateInputsBasic(ins []ttx.TxInput) (res abci.Result) {
 	for _, in := range ins {
 		// Check TxInput basic
 		if res := in.ValidateBasic(); res.IsErr() {
@@ -337,7 +338,7 @@ func validateInputsBasic(ins []types.TxInput) (res abci.Result) {
 }
 
 // Validate inputs and compute total amount of coins
-func validateInputsAdvanced(accounts map[string]*types.Account, signBytes []byte, ins []types.TxInput) (total types.Coins, res abci.Result) {
+func validateInputsAdvanced(accounts map[string]*types.Account, signBytes []byte, ins []ttx.TxInput) (total types.Coins, res abci.Result) {
 	for _, in := range ins {
 		acc := accounts[string(in.Address)]
 		if acc == nil {
@@ -353,7 +354,7 @@ func validateInputsAdvanced(accounts map[string]*types.Account, signBytes []byte
 	return total, abci.OK
 }
 
-func validateInputAdvanced(acc *types.Account, signBytes []byte, in types.TxInput) (res abci.Result) {
+func validateInputAdvanced(acc *types.Account, signBytes []byte, in ttx.TxInput) (res abci.Result) {
 	// Check sequence/coins
 	seq, balance := acc.Sequence, acc.Balance
 	if seq+1 != in.Sequence {
@@ -370,7 +371,7 @@ func validateInputAdvanced(acc *types.Account, signBytes []byte, in types.TxInpu
 	return abci.OK
 }
 
-func validateOutputsBasic(outs []types.TxOutput) (res abci.Result) {
+func validateOutputsBasic(outs []ttx.TxOutput) (res abci.Result) {
 	for _, out := range outs {
 		// Check TxOutput basic
 		if res := out.ValidateBasic(); res.IsErr() {
@@ -380,7 +381,7 @@ func validateOutputsBasic(outs []types.TxOutput) (res abci.Result) {
 	return abci.OK
 }
 
-func validatePostAdvanced(acc *types.Account, signBytes []byte, post types.PostTx) (res abci.Result) {
+func validatePostAdvanced(acc *types.Account, signBytes []byte, post ttx.PostTx) (res abci.Result) {
 	// Check sequence
 	seq := acc.LastPost
 	if seq + 1 != post.Sequence {
@@ -393,7 +394,7 @@ func validatePostAdvanced(acc *types.Account, signBytes []byte, post types.PostT
 	return abci.OK
 }
 
-func validateLikeAdvanced(acc *types.Account, signBytes []byte, like types.LikeTx) (res abci.Result) {
+func validateLikeAdvanced(acc *types.Account, signBytes []byte, like ttx.LikeTx) (res abci.Result) {
 	// Check signatures
 	if !acc.PubKey.VerifyBytes(signBytes, like.Signature) {
 		return abci.ErrBaseInvalidSignature.AppendLog(cmn.Fmt("SignBytes: %X", signBytes))
@@ -401,14 +402,14 @@ func validateLikeAdvanced(acc *types.Account, signBytes []byte, like types.LikeT
 	return abci.OK
 }
 
-func sumOutputs(outs []types.TxOutput) (total types.Coins) {
+func sumOutputs(outs []ttx.TxOutput) (total types.Coins) {
 	for _, out := range outs {
 		total = total.Plus(out.Coins)
 	}
 	return total
 }
 
-func adjustByInputs(state types.AccountSetter, accounts map[string]*types.Account, ins []types.TxInput) {
+func adjustByInputs(state types.AccountSetter, accounts map[string]*types.Account, ins []ttx.TxInput) {
 	for _, in := range ins {
 		acc := accounts[string(in.Address)]
 		if acc == nil {
@@ -423,7 +424,7 @@ func adjustByInputs(state types.AccountSetter, accounts map[string]*types.Accoun
 	}
 }
 
-func adjustByOutputs(state *State, accounts map[string]*types.Account, outs []types.TxOutput, isCheckTx bool) {
+func adjustByOutputs(state *State, accounts map[string]*types.Account, outs []ttx.TxOutput, isCheckTx bool) {
 	for _, out := range outs {
 		destChain, outAddress, _ := out.ChainAndAddress() // already validated
 		if destChain != nil {

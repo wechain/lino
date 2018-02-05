@@ -7,14 +7,14 @@ import (
 	keys "github.com/tendermint/go-crypto/keys"
 	wire "github.com/tendermint/go-wire"
 
-	bc "github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 )
 
 // AppTx Application transaction structure for client
 type AppTx struct {
 	chainID string
 	signers []crypto.PubKey
-	Tx      *bc.AppTx
+	Tx      *ttx.AppTx
 }
 
 var _ keys.Signable = &AppTx{}
@@ -55,7 +55,7 @@ func (s *AppTx) TxBytes() ([]byte, error) {
 	// Code and comment from: basecoin/cmd/basecoin/commands/tx.go
 	// Don't you hate having to do this?
 	// How many times have I lost an hour over this trick?!
-	txBytes := wire.BinaryBytes(bc.TxS{s.Tx})
+	txBytes := wire.BinaryBytes(ttx.TxS{s.Tx})
 	return txBytes, nil
 }
 

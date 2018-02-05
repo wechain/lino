@@ -10,6 +10,7 @@ import (
 
 	abci "github.com/tendermint/abci/types"
 	"github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 	wire "github.com/tendermint/go-wire"
 	eyes "github.com/tendermint/merkleeyes/client"
 	"github.com/tendermint/tmlibs/log"
@@ -36,9 +37,9 @@ func newAppTest(t *testing.T) *appTest {
 }
 
 // make a tx sending 5mycoin from each accIn to accOut
-func (at *appTest) getTx(seq int) *types.SendTx {
-	tx := types.MakeSendTx(seq, at.accOut, at.accIn)
-	types.SignTx(at.chainID, tx, at.accIn)
+func (at *appTest) getTx(seq int) *ttx.SendTx {
+	tx := ttx.MakeSendTx(seq, at.accOut, at.accIn)
+	ttx.SignTx(at.chainID, tx, at.accIn)
 	return tx
 }
 
@@ -52,8 +53,8 @@ func (at *appTest) acc2app(acc types.Account) {
 
 // reset the in and out accs to be one account each with 7mycoin
 func (at *appTest) reset() {
-	at.accIn = types.MakeAcc("input0")
-	at.accOut = types.MakeAcc("output0")
+	at.accIn = ttx.MakeAcc("input0")
+	at.accOut = ttx.MakeAcc("output0")
 
 	eyesCli := eyes.NewLocalClient("", 0)
 	at.app = NewLinocoin(eyesCli)
@@ -70,12 +71,12 @@ func (at *appTest) reset() {
 }
 
 // returns the final balance and expected balance for input and output accounts
-func (at *appTest) exec(tx *types.SendTx, checkTx bool) (res abci.Result, inputGot, inputExp, outputGot, outputExpected types.Coins) {
+func (at *appTest) exec(tx *ttx.SendTx, checkTx bool) (res abci.Result, inputGot, inputExp, outputGot, outputExpected types.Coins) {
 
 	initBalIn := at.app.GetState().GetAccount(at.accIn.Account.PubKey.Address()).Balance
 	initBalOut := at.app.GetState().GetAccount(at.accOut.Account.PubKey.Address()).Balance
 
-	txBytes := []byte(wire.BinaryBytes(struct{ types.Tx }{tx}))
+	txBytes := []byte(wire.BinaryBytes(struct{ ttx.Tx }{tx}))
 	if checkTx {
 		res = at.app.CheckTx(txBytes)
 	} else {
@@ -116,7 +117,7 @@ func TestSetOption(t *testing.T) {
 	assert.EqualValues(res, "Success")
 
 	// make a nice account...
-	accIn := types.MakeAcc("input0")
+	accIn := ttx.MakeAcc("input0")
 	accsInBytes, err := json.Marshal(accIn.Account)
 	assert.Nil(err)
 	res = app.SetOption("base/account", string(accsInBytes))

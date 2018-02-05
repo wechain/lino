@@ -2,7 +2,7 @@ package commands
 
 import (
 	"github.com/pkg/errors"
-	bc "github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 	crypto "github.com/tendermint/go-crypto"
 	keys "github.com/tendermint/go-crypto/keys"
 	wire "github.com/tendermint/go-wire"
@@ -11,7 +11,7 @@ import (
 type SendTx struct {
 	chainID string
 	signers []crypto.PubKey
-	Tx      *bc.SendTx
+	Tx      *ttx.SendTx
 }
 
 var _ keys.Signable = &SendTx{}
@@ -54,7 +54,7 @@ func (s *SendTx) TxBytes() ([]byte, error) {
 	// Don't you hate having to do this?
 	// How many times have I lost an hour over this trick?!
 	txBytes := wire.BinaryBytes(struct {
-		bc.Tx `json:"unwrap"`
+		ttx.Tx `json:"unwrap"`
 	}{s.Tx})
 	return txBytes, nil
 }

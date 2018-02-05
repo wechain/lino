@@ -13,6 +13,7 @@ import (
 
 	sm "github.com/lino-network/lino/state"
 	"github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 	"github.com/lino-network/lino/version"
 )
 
@@ -112,7 +113,7 @@ func (app *Linocoin) DeliverTx(txBytes []byte) (res abci.Result) {
 	}
 
 	// Decode tx
-	var tx types.Tx
+	var tx ttx.Tx
 	err := wire.ReadBinaryBytes(txBytes, &tx)
 	if err != nil {
 		return abci.ErrBaseEncodingError.AppendLog("Error decoding tx: " + err.Error())
@@ -133,7 +134,7 @@ func (app *Linocoin) CheckTx(txBytes []byte) (res abci.Result) {
 	}
 
 	// Decode tx
-	var tx types.Tx
+	var tx ttx.Tx
 	err := wire.ReadBinaryBytes(txBytes, &tx)
 	if err != nil {
 		return abci.ErrBaseEncodingError.AppendLog("Error decoding tx: " + err.Error())

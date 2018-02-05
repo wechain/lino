@@ -12,6 +12,7 @@ import (
 	txcmd "github.com/tendermint/light-client/commands/txs"
 
 	btypes "github.com/lino-network/lino/types"
+	ttx "github.com/lino-network/lino/types/tx"
 )
 
 //-------------------------
@@ -43,7 +44,7 @@ func init() {
 // runDemo is an example of how to make a tx
 func doPostTx(cmd *cobra.Command, args []string) error {
 	// load data from json or flags
-	tx := new(btypes.PostTx)
+	tx := new(ttx.PostTx)
 	err := readPostTxFlags(tx)
 	if err != nil {
 		return err
@@ -65,7 +66,7 @@ func doPostTx(cmd *cobra.Command, args []string) error {
 	return txcmd.OutputTx(bres)
 }
 
-func readPostTxFlags(tx *btypes.PostTx) error {
+func readPostTxFlags(tx *ttx.PostTx) error {
 	//parse the fee and amounts into coin types
 	poster, err := hex.DecodeString(cmn.StripHex(FlagAddress))
 	if err != nil {

@@ -21,6 +21,7 @@ import (
 	"github.com/lino-network/lino/types"
 	"github.com/tendermint/tendermint/rpc/client"
 	tmtypes "github.com/tendermint/tendermint/types"
+	ttx "github.com/lino-network/lino/types/tx"
 )
 
 var RelayCmd = &cobra.Command{
@@ -255,8 +256,8 @@ func (r *relayer) appTx(ibcTx ibc.IBCTx) error {
 
 	smallCoins := types.Coin{"mycoin", 1}
 
-	input := types.NewTxInput(r.privKey.PubKey, types.Coins{smallCoins}, sequence)
-	tx := &types.AppTx{
+	input := ttx.NewTxInput(r.privKey.PubKey, types.Coins{smallCoins}, sequence)
+	tx := &ttx.AppTx{
 		Gas:   0,
 		Fee:   smallCoins,
 		Name:  "IBC",
@@ -266,7 +267,7 @@ func (r *relayer) appTx(ibcTx ibc.IBCTx) error {
 
 	tx.Input.Signature = r.privKey.Sign(tx.SignBytes(r.chainID))
 	txBytes := []byte(wire.BinaryBytes(struct {
-		types.Tx `json:"unwrap"`
+		ttx.Tx `json:"unwrap"`
 	}{tx}))
 
 	data, log, err := broadcastTxWithClient(r.client, txBytes)
