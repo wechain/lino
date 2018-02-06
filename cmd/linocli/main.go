@@ -40,12 +40,15 @@ func main() {
 	pr.AddCommand(proofs.KeyCmd)
 	pr.AddCommand(bcmd.AccountQueryCmd)
 	pr.AddCommand(bcmd.PostQueryCmd)
+	pr.AddCommand(bcmd.LikeQueryCmd)
 
 	// you will always want this for the base send command
 	proofs.TxPresenters.Register("base", bcmd.BaseTxPresenter{})
 	tr := txs.RootCmd
 	tr.AddCommand(bcmd.SendTxCmd)
 	tr.AddCommand(bcmd.PostTxCmd)
+	tr.AddCommand(bcmd.LikeTxCmd)
+	tr.AddCommand(bcmd.DonateTxCmd)
 
 	// Set up the various commands to use
 	BaseCli.AddCommand(

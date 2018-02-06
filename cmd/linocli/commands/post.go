@@ -3,7 +3,6 @@ package commands
 import (
 	"encoding/hex"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -36,9 +35,8 @@ const (
 func init() {
 	flags := PostTxCmd.Flags()
 	flags.String(FlagTitle, "", "Post Title")
-	flags.String(FlagAddress, "", "Post author")
 	flags.String(FlagContent, "", "Post content")
-	flags.Int(FlagSequence, -1, "Sequence number for this post")
+	flags.Int(FlagPostSeq, -1, "Sequence number for this post")
 }
 
 // runDemo is an example of how to make a tx
@@ -67,19 +65,13 @@ func doPostTx(cmd *cobra.Command, args []string) error {
 }
 
 func readPostTxFlags(tx *ttx.PostTx) error {
-	//parse the fee and amounts into coin types
-	poster, err := hex.DecodeString(cmn.StripHex(FlagAddress))
-	if err != nil {
-		return errors.Wrap(err, "Invalid address")
-	}
-	parentAddr, _ := hex.DecodeString(cmn.StripHex(FlagParentAddr))
-	if err == nil {
+	parentAddr, parentAddrErr := hex.DecodeString(cmn.StripHex(FlagParentAddr))
+	if parentAddrErr == nil {
 		// Set parent post
 		tx.Parent = btypes.PostID(parentAddr, viper.GetInt(FlagParentSeq))
 	}
-	tx.Address = poster
 	tx.Title = viper.GetString(FlagTitle)
 	tx.Content = viper.GetString(FlagContent)
-	tx.Sequence = viper.GetInt(FlagSequence)
+	tx.Sequence = viper.GetInt(FlagPostSeq)
 	return nil
 }

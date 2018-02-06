@@ -8,17 +8,17 @@ To keep things clear, let's have two shells...
 
 ```
 % export BCHOME=~/.democli
-% linocli keys new demo
-% linocli keys get demo -o json
+% linocli keys new cool
+% linocli keys get cool -o json
 ```
 
 And set up a few more keys for fun...
 
 ```
-% linocli keys new buddy
+% linocli keys new friend
 % linocli keys list
-% ME=$(linocli keys get demo | awk '{print $2}')
-% YOU=$(linocli keys get buddy | awk '{print $2}')
+% ME=$(linocli keys get cool | awk '{print $2}')
+% YOU=$(linocli keys get friend | awk '{print $2}')
 ```
 
 ## Set up a clean linocoin, initialized with your account
@@ -49,4 +49,34 @@ $ linocoin start
 -> copy hash to HASH
 % linocli query tx $HASH
 % linocli query account $YOU
+```
+
+## Send a post
+
+```
+% linocli tx post --name cool --title title --postSeq 1 --content asdf
+```
+
+## Query a post
+
+```
+% linocli query post --postAuthor=$ME --postSeq=1
+```
+
+## Like a post
+
+```
+% linocli tx like --postAuthor=$ME --postSeq=1 weight=100 --name=cool
+```
+
+## Query a like
+
+```
+% linocli query like --address=$ME --postAuthor=$ME --postSeq=1
+```
+
+## Donate a post
+
+```
+% linocli tx donate --name=cool --postAuthor=$ME --amount=100mycoin --sequence=1 --postSeq=1
 ```

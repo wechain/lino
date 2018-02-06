@@ -26,12 +26,12 @@ var PostQueryCmd = &cobra.Command{
 
 func init() {
 	flags := PostQueryCmd.Flags()
-	flags.String(FlagAddress, "", "Destination address for the query")
-	flags.Int(FlagSequence, -1, "Sequence number for post")
+	flags.String(FlagPostAuthor, "", "Destination address for the query")
+	flags.Int(FlagPostSeq, -1, "Sequence number for post")
 }
 
 func doPostQuery(cmd *cobra.Command, args []string) error {
-	poster, err := hex.DecodeString(cmn.StripHex(FlagAddress))
+	poster, err := hex.DecodeString(cmn.StripHex(viper.GetString(FlagPostAuthor)))
 	if err != nil {
 		return errors.Wrap(err, "Invalid address")
 	}
@@ -39,7 +39,7 @@ func doPostQuery(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	key := btypes.PostKey(btypes.PostID(poster, viper.GetInt(FlagSequence)))
+	key := btypes.PostKey(btypes.PostID(poster, viper.GetInt(FlagPostSeq)))
 	post := new(btypes.Post)
 	proof, err := proofcmd.GetAndParseAppProof(key, &post)
 	if err != nil {

@@ -129,7 +129,7 @@ func MakeDonateTx(seq int, cost int64, fee int64, to []byte, accsIn types.PrivAc
 	return tx
 }
 
-func MakeLikeTx(weight int, from types.PrivAccount, post_id []byte, is_like, is_first_time bool) *LikeTx {
+func MakeLikeTx(weight int, from types.PrivAccount, post_id []byte, is_first_time bool) *LikeTx {
 	if is_first_time {
 		return &LikeTx{
 			From:  from.PubKey.Address(),

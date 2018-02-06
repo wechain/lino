@@ -51,7 +51,7 @@ func (tx PostTx) ValidateBasic() abci.Result {
 }
 
 func (tx *PostTx) String() string {
-	return Fmt("PostTx{%v, %v, %v, %v}", tx.Address, tx.Title, tx.Content, tx.Sequence)
+	return Fmt("PostTx{%v, %v, %v, %v, %v, %v}", tx.Address, tx.Title, tx.Content, tx.Sequence, tx.Parent, tx.PubKey)
 }
 
 // ============================================================================
@@ -72,6 +72,7 @@ func (p *CliPostTx) SignBytes() []byte {
 // AddSigner sets address and pubkey info on the tx based on the key that
 // will be used for signing
 func (p *CliPostTx) AddSigner(pk crypto.PubKey) {
+	p.Tx.Address = pk.Address()
 	if p.Tx.Sequence == 1 {
 		p.Tx.PubKey = pk
 	}

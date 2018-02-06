@@ -533,7 +533,7 @@ func TestLikeTx(t *testing.T) {
 	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
 
 	// Valid Like
-	tx1 := ttx.MakeLikeTx(10000, et.accOut, pstID, true, true)
+	tx1 := ttx.MakeLikeTx(10000, et.accOut, pstID, true)
 	signBytes := tx1.SignBytes(et.chainID)
 	tx1.Signature = et.accOut.Sign(signBytes)
 	rst := ExecTx(et.state, nil, tx1, false, nil)
@@ -545,7 +545,7 @@ func TestLikeTx(t *testing.T) {
 	assert.Equal(10000, likes[0].Weight)
 
 	// Invalid post Id
-	tx1 = ttx.MakeLikeTx(0, et.accOut, []byte("wrong_pid"), true, false)
+	tx1 = ttx.MakeLikeTx(0, et.accOut, []byte("wrong_pid"), false)
 	signBytes = tx1.SignBytes(et.chainID)
 	tx1.Signature = et.accOut.Sign(signBytes)
 	rst = ExecTx(et.state, nil, tx1, false, nil)
@@ -554,7 +554,7 @@ func TestLikeTx(t *testing.T) {
 	assert.Equal(1, len(likes), "Unexpeted Likes array: %v", likes)
 
 	// Valid Dislike
-	tx1 = ttx.MakeLikeTx(-10000, et.accOut, pstID, false, false)
+	tx1 = ttx.MakeLikeTx(-10000, et.accOut, pstID, false)
 	signBytes = tx1.SignBytes(et.chainID)
 	tx1.Signature = et.accOut.Sign(signBytes)
 	rst = ExecTx(et.state, nil, tx1, false, nil)

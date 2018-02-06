@@ -68,6 +68,7 @@ func (ltx *CliLikeTx) SignBytes() []byte {
 // AddSigner sets address and pubkey info on the tx based on the key that
 // will be used for signing
 func (ltx *CliLikeTx) AddSigner(pk crypto.PubKey) {
+	ltx.Tx.From = pk.Address()
 	ltx.Tx.PubKey = pk
 }
 

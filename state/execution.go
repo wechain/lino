@@ -160,7 +160,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		if res.IsErr() {
 			return res
 		}
-		if tx.Parent != nil && state.GetPost(tx.Parent) == nil {
+		if len(tx.Parent) > 0 && state.GetPost(tx.Parent) == nil {
 			// TODO change to unknownpost
 			return abci.ErrBaseUnknownAddress
 		}
@@ -249,13 +249,15 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		}
 		account := state.GetAccount(tx.From)
 		if account == nil {
+			account = &types.Account{}
+		}
+		if account.PubKey.Empty() {
 			if tx.PubKey.Empty() {
 				return abci.ErrBaseUnknownAddress
 			}
-			account = &types.Account{}
 			account.PubKey = tx.PubKey
-			state.SetAccount(tx.From, account)
 		}
+		state.SetAccount(tx.From, account)
 		signBytes := tx.SignBytes(chainID)
 		res = validateLikeAdvanced(account, signBytes, *tx)
 		if res.IsErr() {
