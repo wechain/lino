@@ -158,10 +158,6 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		if res.IsErr() {
 			return res
 		}
-		if len(tx.Parent) > 0 && state.GetPost(tx.Parent) == nil {
-			// TODO change to unknownpost
-			return abci.ErrBaseUnknownAddress
-		}
 		// Get post author account
 		acc := state.GetAccount(tx.Username)
 		if acc == nil {
@@ -175,12 +171,22 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			state.logger.Info(cmn.Fmt("validatePostAdvanced failed on %X: %v", tx.Username, res))
 			return res.PrependLog("in validatePostAdvanced()")
 		}
+
 		acc.LastPost += 1
 		post := &types.Post {
 			Title: tx.Title,
 			Content: tx.Content,
 			Username: tx.Username,
 			Parent: tx.Parent,
+		}
+
+		if len(tx.Parent) > 0 {
+			parentPost := state.GetPost(tx.Parent)
+			if parentPost == nil {
+				// TODO change to unknownpost
+				return abci.ErrBaseUnknownAddress
+			}
+			state.UpdateCommentParent(post, parentPost)
 		}
 		state.SetAccount(tx.Username, acc)
 		state.SetPost(types.PostID(tx.Username, acc.LastPost), post)
@@ -195,11 +201,13 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		if acc == nil {
 			return abci.ErrBaseUnknownAddress
 		}
+
 		post := state.GetPost(tx.To)
 		if post == nil {
 			// TODO change to unknown post error
 			return abci.ErrBaseUnknownAddress
 		}
+
 		// Validate input, advanced
 		signBytes := tx.SignBytes(chainID)
 		res = validateInputAdvanced(acc, signBytes, tx.Input)
@@ -215,6 +223,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		acc.Balance = acc.Balance.Minus(tx.Input.Coins)
 		acc.LastTransaction += 1
 		state.SetAccount(tx.Input.Username, acc)
+		state.UpdateDonatePost(post, acc, tx.Input.Coins)
 		if isCheckTx {
 			return abci.OK
 		}

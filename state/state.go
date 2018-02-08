@@ -97,6 +97,10 @@ func (s *State) SetPost(pid []byte, post *types.Post) {
 	types.SetPost(s, pid, post)
 }
 
+func (s *State) UpdateCommentParent(post *types.Post, parent *types.Post) {
+	fmt.Println("Not implemented yet.", post, parent)
+}
+
 // Like
 
 func (s *State) GetLikesByPostId(post_id []byte) []types.Like {
@@ -116,6 +120,11 @@ func (s *State) CacheWrap() *State {
 		writeCache: cache,
 		logger:     s.logger,
 	}
+}
+
+// Donate
+func (s *State) UpdateDonatePost(post *types.Post, acc *types.Account, coin types.Coins) {
+	fmt.Println("Not implemented yet.", post, acc, coin)
 }
 
 // NOTE: errors if s is not from CacheWrap()

@@ -317,7 +317,7 @@ func TestPostTx(t *testing.T) {
 	assert.Equal(endPostSeq, initPostSeq)
 
 	// Invalid comment
-	tx = ttx.MakePostTx(acc.Account.Username, 2, acc)
+	tx = ttx.MakePostTx(acc.Account.Username, 3, acc)
 	tx.Parent = []byte("parent")
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = acc.Sign(signBytes)
