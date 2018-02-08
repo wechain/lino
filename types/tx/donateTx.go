@@ -11,9 +11,9 @@ import (
 )
 
 type DonateTx struct {
-	Input     TxInput          `json:"inputTx"` // Hmmm do we want coins?
-    To        []byte           `json:"to"`      //post_id
-    Fee       types.Coin       `json:"fee"`
+	Input     TxInput           `json:"inputTx"` // Hmmm do we want coins?
+    To        types.AccountName `json:"to"`      //post_id
+    Fee       types.Coin        `json:"fee"`
 }
 
 func (tx *DonateTx) SignBytes(chainID string) []byte {
@@ -61,10 +61,9 @@ func (s *CliDonateTx) SignBytes() []byte {
 // Depending on the Signable, one may be able to call this multiple times for multisig
 // Returns error if called with invalid data or too many times
 func (s *CliDonateTx) Sign(pubkey crypto.PubKey, sig crypto.Signature) error {
-	addr := pubkey.Address()
 	set := s.Tx.SetSignature(sig)
 	if !set {
-		return errors.Errorf("Cannot add signature for address %X", addr)
+		return errors.Errorf("Cannot add signature for address %X", pubkey.Address())
 	}
 	s.signers = append(s.signers, pubkey)
 	return nil
@@ -98,16 +97,7 @@ func (s *CliDonateTx) TxBytes() ([]byte, error) {
 // will be used for signing
 func (s *CliDonateTx) AddSigner(pk crypto.PubKey) {
 	// get addr if available
-	var addr []byte
-	if !pk.Empty() {
-		addr = pk.Address()
-	}
-
-	// set the send address, and pubkey if needed
-	s.Tx.Input.Address = addr
-	if s.Tx.Input.Sequence == 1 {
-		s.Tx.Input.PubKey = pk
-	}
+	s.signers = append(s.signers, pk)
 }
 
 // TODO: this should really be in the basecoin.types SendTx,
@@ -117,9 +107,6 @@ func (s *CliDonateTx) ValidateBasic() error {
 		return errors.New("No chain-id specified")
 	}
 	in := s.Tx.Input
-	if len(in.Address) != 20 {
-		return errors.Errorf("Invalid input address length: %d", len(in.Address))
-	}
 	if !in.Coins.IsValid() {
 		return errors.Errorf("Invalid input coins %v", in.Coins)
 	}

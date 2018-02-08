@@ -5,19 +5,18 @@ import (
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
-	"github.com/tendermint/go-wire/data"
 	. "github.com/tendermint/tmlibs/common"
+	"github.com/lino-network/lino/types"
 	keys "github.com/tendermint/go-crypto/keys"
 )
 
 type PostTx struct {
-	Address   data.Bytes       `json:"address"`   // Hash of the PubKey
-	Title     string           `json:"title"`
-	Content   string           `json:"content"`
-	Sequence  int              `json:"sequence"`  // Must be 1 greater than the last committed PostTx
-	Parent    []byte           `json:"parent"`
-	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-	PubKey    crypto.PubKey    `json:"pub_key"`   // Is present iff Sequence == 0
+	Username  types.AccountName `json:"username"`   // Hash of the PubKey
+	Title     string            `json:"title"`
+	Content   string            `json:"content"`
+	Sequence  int               `json:"sequence"`   // Must be 1 greater than the last committed PostTx
+	Parent    []byte            `json:"parent"`
+	Signature crypto.Signature  `json:"signature"`  // Depends on the PubKey type and the whole Tx
 }
 
 func (tx *PostTx) SignBytes(chainID string) []byte {
@@ -35,23 +34,14 @@ func (tx *PostTx) SetSignature(sig crypto.Signature) bool {
 }
 
 func (tx PostTx) ValidateBasic() abci.Result {
-	if len(tx.Address) != 20 {
-		return abci.ErrBaseInvalidInput.AppendLog("Invalid address length")
-	}
 	if tx.Sequence <= 0 {
 		return abci.ErrBaseInvalidInput.AppendLog("Sequence must be greater than 0")
-	}
-	if tx.Sequence == 1 && tx.PubKey.Empty() {
-		return abci.ErrBaseInvalidInput.AppendLog("PubKey must be present when Sequence == 1")
-	}
-	if tx.Sequence > 1 && !tx.PubKey.Empty() {
-		return abci.ErrBaseInvalidInput.AppendLog("PubKey must be nil when Sequence > 1")
 	}
 	return abci.OK
 }
 
 func (tx *PostTx) String() string {
-	return Fmt("PostTx{%v, %v, %v, %v, %v, %v}", tx.Address, tx.Title, tx.Content, tx.Sequence, tx.Parent, tx.PubKey)
+	return Fmt("PostTx{%v, %v, %v, %v, %v, %v}", tx.Username, tx.Title, tx.Content, tx.Sequence, tx.Parent)
 }
 
 // ============================================================================
@@ -71,11 +61,8 @@ func (p *CliPostTx) SignBytes() []byte {
 
 // AddSigner sets address and pubkey info on the tx based on the key that
 // will be used for signing
-func (p *CliPostTx) AddSigner(pk crypto.PubKey) {
-	p.Tx.Address = pk.Address()
-	if p.Tx.Sequence == 1 {
-		p.Tx.PubKey = pk
-	}
+func (p *CliPostTx) AddSigner(AccountName, pk crypto.PubKey) {
+	p.signers = append(p.signers, pk)
 }
 
 // Sign will add a signature and pubkey.
@@ -83,11 +70,11 @@ func (p *CliPostTx) AddSigner(pk crypto.PubKey) {
 // Depending on the Signable, one may be able to call this multiple times for multisig
 // Returns error if called with invalid data or too many times
 func (p *CliPostTx) Sign(pubkey crypto.PubKey, sig crypto.Signature) error {
-	addr := pubkey.Address()
 	set := p.Tx.SetSignature(sig)
 	if !set {
-		return errors.Errorf("Cannot add signature for address %X", addr)
+		return errors.Errorf("Cannot add signature for address %X", pubkey)
 	}
+	p.signers = append(p.signers, pubkey)
 	return nil
 }
 // Signers will return the public key(s) that signed if the signature
@@ -119,9 +106,6 @@ func (p *CliPostTx) TxBytes() ([]byte, error) {
 func (p *CliPostTx) ValidateBasic() error {
 	if p.ChainID == "" {
 		return errors.New("No chain-id specified")
-	}
-	if len(p.Tx.Address) != 20 {
-		return errors.Errorf("Invalid address length: %d", len(p.Tx.Address))
 	}
 	if p.Tx.Sequence <= 0 {
 		return errors.New("Sequence must be greater than 0")

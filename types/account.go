@@ -2,16 +2,28 @@ package types
 
 import (
 	"fmt"
-
+	"time"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-wire"
 )
 
+
+type AccountName   []byte
+type JsonFormat    string
+type FollowerList  []AccountName
+type FollowingList []AccountName
+
 type Account struct {
-	PubKey       crypto.PubKey `json:"pub_key"` // May be nil, if not known.
-	Sequence     int           `json:"sequence"`
-	Balance      Coins         `json:"coins"`
-	LastPost     int           `json:"last_post"` // Identify the last post sequence number.
+	Username          AccountName   `json:"username"`            // Primary Key
+	PubKey            crypto.PubKey `json:"pub_key"`             // May be nil, if not known
+	Metadata          JsonFormat    `json:"Metadata"`            // Json format metadata
+	LastAccountUpdate time.Time     `json:"last_account_update"` // Account last update
+	Created           time.Time     `json:"created"`             // Account creation time
+	Mined             bool          `json:"mined"`               // Is mine (Not used now)
+	LastTransaction   int           `json:"last_transaction"`    // Transaction sequence
+	Balance           Coins         `json:"coins"`               // Account balance
+	LastPost          int           `json:"last_post"`           // Post sequence
+	FollowerList      []AccountName `json:"follower_list"`       // All followers
+	FollowingList     []AccountName `json:"following_list"`      // All account followed by this account
 }
 
 func (acc *Account) Copy() *Account {
@@ -26,8 +38,11 @@ func (acc *Account) String() string {
 	if acc == nil {
 		return "nil-Account"
 	}
-	return fmt.Sprintf("Account{%v %v %v %v}",
-		acc.PubKey, acc.Sequence, acc.Balance, acc.LastPost)
+	return fmt.Sprintf(`Account{username:%v, PubKey:%v, Metadata:%v, LastAccountUpdate:%v
+		                         Created:%v, Mined:%v, LastTransaction:%v, Balance:%v, LastPost:%v
+		                         FollowerList:%v, FollowingList:%v}`,
+		acc.Username, acc.PubKey, acc.Metadata, acc.LastAccountUpdate, acc.Created, acc.Mined,
+		acc.LastTransaction, acc.Balance, acc.LastPost, acc.FollowerList, acc.FollowingList)
 }
 
 //----------------------------------------
@@ -40,37 +55,14 @@ type PrivAccount struct {
 //----------------------------------------
 
 type AccountGetter interface {
-	GetAccount(addr []byte) *Account
+	GetAccount(username AccountName) *Account
 }
 
 type AccountSetter interface {
-	SetAccount(addr []byte, acc *Account)
+	SetAccount(username AccountName, acc *Account)
 }
 
 type AccountGetterSetter interface {
 	GetAccount(addr []byte) *Account
 	SetAccount(addr []byte, acc *Account)
-}
-
-func AccountKey(addr []byte) []byte {
-	return append([]byte("base/a/"), addr...)
-}
-
-func GetAccount(store KVStore, addr []byte) *Account {
-	data := store.Get(AccountKey(addr))
-	if len(data) == 0 {
-		return nil
-	}
-	var acc *Account
-	err := wire.ReadBinaryBytes(data, &acc)
-	if err != nil {
-		panic(fmt.Sprintf("Error reading account %X error: %v",
-			data, err.Error()))
-	}
-	return acc
-}
-
-func SetAccount(store KVStore, addr []byte, acc *Account) {
-	accBytes := wire.BinaryBytes(acc)
-	store.Set(AccountKey(addr), accBytes)
 }

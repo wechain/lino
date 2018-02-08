@@ -10,12 +10,13 @@ import (
 
 // Creates a PrivAccount from secret.
 // The amount is not set.
-func PrivAccountFromSecret(secret string) types.PrivAccount {
+func PrivAccountFromSecret(username string, secret string) types.PrivAccount {
 	privKey :=
 		crypto.GenPrivKeyEd25519FromSecret([]byte(secret)).Wrap()
 	privAccount := types.PrivAccount{
 		PrivKey: privKey,
 		Account: types.Account{
+			Username: types.AccountName([]byte(username)),
 			PubKey: privKey.PubKey(),
 		},
 	}
@@ -37,8 +38,9 @@ func RandAccounts(num int, minAmount int64, maxAmount int64) []types.PrivAccount
 		privAccs[i] = types.PrivAccount{
 			PrivKey: privKey,
 			Account: types.Account{
-				PubKey:  pubKey,
-				Balance: types.Coins{types.Coin{"", balance}},
+				Username: types.AccountName(pubKey.Address()),
+				PubKey:   pubKey,
+				Balance:  types.Coins{types.Coin{"", balance}},
 			},
 		}
 	}
@@ -57,62 +59,51 @@ func RandAccounts(num int, minAmount int64, maxAmount int64) []types.PrivAccount
 //	return
 //}
 
-func MakeAcc(secret string) types.PrivAccount {
-	privAcc := PrivAccountFromSecret(secret)
+func MakeAcc(username string, secret string) types.PrivAccount {
+	privAcc := PrivAccountFromSecret(username, secret)
 	privAcc.Account.Balance = types.Coins{{"mycoin", 7}}
 	return privAcc
 }
 
-func Accs2TxInputs(seq int, accs ...types.PrivAccount) []TxInput {
-	var txs []TxInput
-	for _, acc := range accs {
-		tx := NewTxInput(
-			acc.Account.PubKey,
-			types.Coins{{"mycoin", 5}},
-			seq)
-		txs = append(txs, tx)
-	}
-	return txs
+func Acc2TxInput(seq int, acc types.PrivAccount) TxInput {
+	return NewTxInput(
+				acc.Account.Username,
+				types.Coins{{"mycoin", 5}},
+				seq)
 }
 
 //turn a list of accounts into basic list of transaction outputs
-func Accs2TxOutputs(accs ...types.PrivAccount) []TxOutput {
-	var txs []TxOutput
-	for _, acc := range accs {
-		tx := TxOutput{
-			acc.Account.PubKey.Address(),
+func Acc2TxOutput(acc types.PrivAccount) TxOutput {
+	return TxOutput{
+			acc.Account.Username,
 			types.Coins{{"mycoin", 4}}}
-		txs = append(txs, tx)
-	}
-	return txs
 }
 
-func MakeSendTx(seq int, accOut types.PrivAccount, accsIn ...types.PrivAccount) *SendTx {
+func MakeSendTx(seq int, accOut types.PrivAccount, accIn types.PrivAccount) *SendTx {
 	tx := &SendTx{
 		Gas:     0,
 		Fee:     types.Coin{"mycoin", 1},
-		Inputs:  Accs2TxInputs(seq, accsIn...),
-		Outputs: Accs2TxOutputs(accOut),
+		Input:   Acc2TxInput(seq, accIn),
+		Output:  Acc2TxOutput(accOut),
 	}
 
 	return tx
 }
 
-func MakePostTx(seq int, accOut types.PrivAccount) *PostTx {
+func MakePostTx(username types.AccountName, seq int, accOut types.PrivAccount) *PostTx {
 	if seq > 1 {
 		return &PostTx{
-			Address:  accOut.PubKey.Address(),
+			Username: username,
 			Title:    "Title",
 			Content:  "Content",
 			Sequence: seq,
 		}	
 	} else {
 		return &PostTx{
-			Address:  accOut.PubKey.Address(),
+			Username: username,
 			Title:    "Title",
 			Content:  "Content",
 			Sequence: seq,
-			PubKey: accOut.PubKey,
 		}
 	}
 }
@@ -121,7 +112,7 @@ func MakeDonateTx(seq int, cost int64, fee int64, to []byte, accsIn types.PrivAc
 	tx := &DonateTx{
 		Fee:   types.Coin{"mycoin", fee},
 		Input: NewTxInput(
-			   	   accsIn.Account.PubKey,
+			   	   accsIn.Account.Username,
 			       types.Coins{{"mycoin", cost}},
 			       seq),
 		To:    to,
@@ -146,9 +137,7 @@ func MakeLikeTx(weight int, from types.PrivAccount, post_id []byte, is_first_tim
 	}
 }
 
-func SignTx(chainID string, tx *SendTx, accs ...types.PrivAccount) {
+func SignTx(chainID string, tx *SendTx, acc types.PrivAccount) {
 	signBytes := tx.SignBytes(chainID)
-	for i, _ := range tx.Inputs {
-		tx.Inputs[i].Signature = accs[i].Sign(signBytes)
-	}
+	tx.Input.Signature = acc.Sign(signBytes)
 }

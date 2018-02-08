@@ -1,9 +1,11 @@
 package state
 
 import (
+	"fmt"
 	abci "github.com/tendermint/abci/types"
 	"github.com/lino-network/lino/types"
 	eyes "github.com/tendermint/merkleeyes/client"
+	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/log"
 )
 
@@ -61,14 +63,32 @@ func (s *State) Set(key []byte, value []byte) {
 	s.store.Set(key, value)
 }
 
-func (s *State) GetAccount(addr []byte) *types.Account {
-	return types.GetAccount(s, addr)
+
+// Account
+func AccountKey(username types.AccountName) []byte {
+	return append([]byte("account/"), username...)
 }
 
-func (s *State) SetAccount(addr []byte, acc *types.Account) {
-	types.SetAccount(s, addr, acc)
+func (s *State) GetAccount(username types.AccountName) *types.Account {
+	data := s.Get(AccountKey(username))
+	if len(data) == 0 {
+		return nil
+	}
+	var acc *types.Account
+	err := wire.ReadBinaryBytes(data, &acc)
+	if err != nil {
+		panic(fmt.Sprintf("Error reading account %X error: %v",
+			data, err.Error()))
+	}
+	return acc
 }
 
+func (s *State) SetAccount(username types.AccountName, acc *types.Account) {
+	accBytes := wire.BinaryBytes(acc)
+	s.Set(AccountKey(username), accBytes)
+}
+
+// Post
 func (s *State) GetPost(pid []byte) *types.Post {
 	return types.GetPost(s, pid)
 }
@@ -76,6 +96,8 @@ func (s *State) GetPost(pid []byte) *types.Post {
 func (s *State) SetPost(pid []byte, post *types.Post) {
 	types.SetPost(s, pid, post)
 }
+
+// Like
 
 func (s *State) GetLikesByPostId(post_id []byte) []types.Like {
 	return types.GetLikesByPostId(s, post_id);

@@ -70,7 +70,7 @@ func startCmd(cmd *cobra.Command, args []string) error {
 	linocoinApp.SetLogger(logger.With("module", "app"))
 
 	// register IBC plugn
-	linocoinApp.RegisterPlugin(NewIBCPlugin())
+	//linocoinApp.RegisterPlugin(NewIBCPlugin())
 
 	// register all other plugins
 	for _, p := range plugins {

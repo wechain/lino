@@ -5,7 +5,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/events"
 
-	"github.com/lino-network/lino/plugins/ibc"
 	"github.com/lino-network/lino/types"
 	ttx "github.com/lino-network/lino/types/tx"
 )
@@ -18,48 +17,50 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 	switch tx := tx.(type) {
 	case *ttx.SendTx:
 		// Validate inputs and outputs, basic
-		res := validateInputsBasic(tx.Inputs)
+		res := tx.Input.ValidateBasic()
 		if res.IsErr() {
-			return res.PrependLog("in validateInputsBasic()")
+			return res.PrependLog("in Input validate basic")
 		}
-		res = validateOutputsBasic(tx.Outputs)
+		res = tx.Output.ValidateBasic()
 		if res.IsErr() {
-			return res.PrependLog("in validateOutputsBasic()")
-		}
-
-		// Get inputs
-		accounts, res := getInputs(state, tx.Inputs)
-		if res.IsErr() {
-			return res.PrependLog("in getInputs()")
+			return res.PrependLog("in Output validate basic")
 		}
 
-		// Get or make outputs.
-		accounts, res = getOrMakeOutputs(state, accounts, tx.Outputs)
-		if res.IsErr() {
-			return res.PrependLog("in getOrMakeOutputs()")
+		// Get input account
+		inAcc := state.GetAccount(tx.Input.Username)
+
+		if inAcc == nil {
+			// TODO change to UnknownUsername
+			return abci.ErrBaseUnknownAddress
+		}
+		// Get output account
+		outAcc := state.GetAccount(tx.Output.Username)
+
+		if outAcc == nil {
+			// TODO change to UnknownUsername
+			return abci.ErrBaseUnknownAddress
 		}
 
 		// Validate inputs and outputs, advanced
 		signBytes := tx.SignBytes(chainID)
-		inTotal, res := validateInputsAdvanced(accounts, signBytes, tx.Inputs)
+		res = validateInputAdvanced(inAcc, signBytes, tx.Input)
 		if res.IsErr() {
-			return res.PrependLog("in validateInputsAdvanced()")
+			return res.PrependLog("in validateInputAdvanced()")
 		}
-		outTotal := sumOutputs(tx.Outputs)
-		outPlusFees := outTotal
 		fees := types.Coins{tx.Fee}
+		outPlusFees := tx.Output.Coins
 		if fees.IsValid() { // TODO: fix coins.Plus()
-			outPlusFees = outTotal.Plus(fees)
+			outPlusFees = outPlusFees.Plus(fees)
 		}
-		if !inTotal.IsEqual(outPlusFees) {
-			return abci.ErrBaseInvalidOutput.AppendLog(cmn.Fmt("Input total (%v) != output total + fees (%v)", inTotal, outPlusFees))
+		if !tx.Input.Coins.IsEqual(outPlusFees) {
+			return abci.ErrBaseInvalidOutput.AppendLog(cmn.Fmt("Input total (%v) != output total + fees (%v)", tx.Input.Coins, outPlusFees))
 		}
 
 		// TODO: Fee validation for SendTx
 
 		// Good! Adjust accounts
-		adjustByInputs(state, accounts, tx.Inputs)
-		adjustByOutputs(state, accounts, tx.Outputs, isCheckTx)
+		adjustByInput(state, inAcc, tx.Input)
+		adjustByOutput(state, outAcc, tx.Output, isCheckTx)
 
 		/*
 			// Fire events
@@ -85,23 +86,20 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		}
 
 		// Get input account
-		inAcc := state.GetAccount(tx.Input.Address)
+		inAcc := state.GetAccount(tx.Input.Username)
 		if inAcc == nil {
 			return abci.ErrBaseUnknownAddress
-		}
-		if !tx.Input.PubKey.Empty() {
-			inAcc.PubKey = tx.Input.PubKey
 		}
 
 		// Validate input, advanced
 		signBytes := tx.SignBytes(chainID)
 		res = validateInputAdvanced(inAcc, signBytes, tx.Input)
 		if res.IsErr() {
-			state.logger.Info(cmn.Fmt("validateInputAdvanced failed on %X: %v", tx.Input.Address, res))
+			state.logger.Info(cmn.Fmt("validateInputAdvanced failed on %X: %v", tx.Input.Username, res))
 			return res.PrependLog("in validateInputAdvanced()")
 		}
 		if !tx.Input.Coins.IsGTE(types.Coins{tx.Fee}) {
-			state.logger.Info(cmn.Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
+			state.logger.Info(cmn.Fmt("Sender did not send enough to cover the fee %X", tx.Input.Username))
 			return abci.ErrBaseInsufficientFunds.AppendLog(cmn.Fmt("input coins is %v, but fee is %v", tx.Input.Coins, types.Coins{tx.Fee}))
 		}
 
@@ -114,12 +112,12 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 
 		// Good!
 		coins := tx.Input.Coins.Minus(types.Coins{tx.Fee})
-		inAcc.Sequence += 1
+		inAcc.LastTransaction += 1
 		inAcc.Balance = inAcc.Balance.Minus(tx.Input.Coins)
 
 		// If this is a CheckTx, stop now.
 		if isCheckTx {
-			state.SetAccount(tx.Input.Address, inAcc)
+			state.SetAccount(tx.Input.Username, inAcc)
 			return abci.OK
 		}
 
@@ -128,8 +126,8 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 
 		// Run the tx.
 		cache := state.CacheWrap()
-		cache.SetAccount(tx.Input.Address, inAcc)
-		ctx := types.NewCallContext(tx.Input.Address, inAcc, coins)
+		cache.SetAccount(tx.Input.Username, inAcc)
+		ctx := types.NewCallContext(tx.Input.Username, inAcc, coins)
 		res = plugin.RunTx(cache, ctx, tx.Data)
 		if res.IsOK() {
 			cache.CacheSync()
@@ -151,7 +149,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			inAccCopy.Balance = inAccCopy.Balance.Plus(coins)
 			// But take the gas
 			// TODO
-			state.SetAccount(tx.Input.Address, inAccCopy)
+			state.SetAccount(tx.Input.Username, inAccCopy)
 		}
 		return res
 
@@ -165,29 +163,27 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			return abci.ErrBaseUnknownAddress
 		}
 		// Get post author account
-		acc := state.GetAccount(tx.Address)
+		acc := state.GetAccount(tx.Username)
 		if acc == nil {
-			acc = &types.Account{}
-		}
-		if !tx.PubKey.Empty() {
-			acc.PubKey = tx.PubKey
+			return abci.ErrBaseUnknownAddress.AppendLog(
+				cmn.Fmt("Unrecognized username%v", tx.Username))
 		}
 
 		signBytes := tx.SignBytes(chainID)
 		res = validatePostAdvanced(acc, signBytes, *tx)
 		if res.IsErr() {
-			state.logger.Info(cmn.Fmt("validatePostAdvanced failed on %X: %v", tx.Address, res))
+			state.logger.Info(cmn.Fmt("validatePostAdvanced failed on %X: %v", tx.Username, res))
 			return res.PrependLog("in validatePostAdvanced()")
 		}
 		acc.LastPost += 1
 		post := &types.Post {
 			Title: tx.Title,
 			Content: tx.Content,
-			Author: tx.Address,
+			Username: tx.Username,
 			Parent: tx.Parent,
 		}
-		state.SetAccount(tx.Address, acc)
-		state.SetPost(types.PostID(tx.Address, acc.LastPost), post)
+		state.SetAccount(tx.Username, acc)
+		state.SetPost(types.PostID(tx.Username, acc.LastPost), post)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
 	case *ttx.DonateTx:
@@ -195,7 +191,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		if res.IsErr() {
 			return res
 		}
-        acc := state.GetAccount(tx.Input.Address)
+        acc := state.GetAccount(tx.Input.Username)
 		if acc == nil {
 			return abci.ErrBaseUnknownAddress
 		}
@@ -204,36 +200,33 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			// TODO change to unknown post error
 			return abci.ErrBaseUnknownAddress
 		}
-		if !tx.Input.PubKey.Empty() {
-			acc.PubKey = tx.Input.PubKey
-		}
 		// Validate input, advanced
 		signBytes := tx.SignBytes(chainID)
 		res = validateInputAdvanced(acc, signBytes, tx.Input)
 		if res.IsErr() {
-			state.logger.Info(cmn.Fmt("validateInputAdvanced failed on %X: %v", tx.Input.Address, res))
+			state.logger.Info(cmn.Fmt("validateInputAdvanced failed on %X: %v", tx.Input.Username, res))
 			return res.PrependLog("in validateInputAdvanced()")
 		}
 		if !tx.Input.Coins.IsGTE(types.Coins{tx.Fee}) {
-			state.logger.Info(cmn.Fmt("Sender did not send enough to cover the fee %X", tx.Input.Address))
+			state.logger.Info(cmn.Fmt("Sender did not send enough to cover the fee %X", tx.Input.Username))
 			return abci.ErrBaseInsufficientFunds.AppendLog(cmn.Fmt("input coins is %v, but fee is %v", tx.Input.Coins, tx.Fee))
 		}
 		
 		acc.Balance = acc.Balance.Minus(tx.Input.Coins)
-		acc.Sequence += 1
-		state.SetAccount(tx.Input.Address, acc)
+		acc.LastTransaction += 1
+		state.SetAccount(tx.Input.Username, acc)
 		if isCheckTx {
 			return abci.OK
 		}
 
-		outAcc := state.GetAccount(post.Author)
+		outAcc := state.GetAccount(post.Username)
 		if outAcc == nil {
 			// TODO change to unknown post
 			return abci.ErrBaseUnknownAddress
 		}
 		outCoin := tx.Input.Coins.Minus(types.Coins{tx.Fee})
 		outAcc.Balance = outAcc.Balance.Plus(outCoin)
-		state.SetAccount(post.Author, outAcc)
+		state.SetAccount(post.Username, outAcc)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
 	case *ttx.LikeTx:
@@ -276,91 +269,11 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 	}
 }
 
-//--------------------------------------------------------------------------------
-// The accounts from the TxInputs must either already have
-// crypto.PubKey.(type) != nil, (it must be known),
-// or it must be specified in the TxInput.
-func getInputs(state types.AccountGetter, ins []ttx.TxInput) (map[string]*types.Account, abci.Result) {
-	accounts := map[string]*types.Account{}
-	for _, in := range ins {
-		// Account shouldn't be duplicated
-		if _, ok := accounts[string(in.Address)]; ok {
-			return nil, abci.ErrBaseDuplicateAddress
-		}
-
-		acc := state.GetAccount(in.Address)
-		if acc == nil {
-			return nil, abci.ErrBaseUnknownAddress
-		}
-
-		if !in.PubKey.Empty() {
-			acc.PubKey = in.PubKey
-		}
-		accounts[string(in.Address)] = acc
-	}
-	return accounts, abci.OK
-}
-
-func getOrMakeOutputs(state types.AccountGetter, accounts map[string]*types.Account, outs []ttx.TxOutput) (map[string]*types.Account, abci.Result) {
-	if accounts == nil {
-		accounts = make(map[string]*types.Account)
-	}
-
-	for _, out := range outs {
-		chain, outAddress, _ := out.ChainAndAddress() // already validated
-		if chain != nil {
-			// we dont need an account for the other chain.
-			// we'll just create an outgoing ibc packet
-			continue
-		}
-		// Account shouldn't be duplicated
-		if _, ok := accounts[string(outAddress)]; ok {
-			return nil, abci.ErrBaseDuplicateAddress
-		}
-		acc := state.GetAccount(outAddress)
-		// output account may be nil (new)
-		if acc == nil {
-			// zero value is valid, empty account
-			acc = &types.Account{}
-		}
-		accounts[string(outAddress)] = acc
-	}
-	return accounts, abci.OK
-}
-
-// Validate inputs basic structure
-func validateInputsBasic(ins []ttx.TxInput) (res abci.Result) {
-	for _, in := range ins {
-		// Check TxInput basic
-		if res := in.ValidateBasic(); res.IsErr() {
-			return res
-		}
-	}
-	return abci.OK
-}
-
-// Validate inputs and compute total amount of coins
-func validateInputsAdvanced(accounts map[string]*types.Account, signBytes []byte, ins []ttx.TxInput) (total types.Coins, res abci.Result) {
-	for _, in := range ins {
-		acc := accounts[string(in.Address)]
-		if acc == nil {
-			cmn.PanicSanity("validateInputsAdvanced() expects account in accounts")
-		}
-		res = validateInputAdvanced(acc, signBytes, in)
-		if res.IsErr() {
-			return
-		}
-		// Good. Add amount to total
-		total = total.Plus(in.Coins)
-	}
-	return total, abci.OK
-}
-
 func validateInputAdvanced(acc *types.Account, signBytes []byte, in ttx.TxInput) (res abci.Result) {
 	// Check sequence/coins
-	seq, balance := acc.Sequence, acc.Balance
+	seq, balance := acc.LastTransaction, acc.Balance
 	if seq+1 != in.Sequence {
-		return abci.ErrBaseInvalidSequence.AppendLog(cmn.Fmt("Got %v, expected %v. (acc.seq=%v)", in.Sequence, seq+1, acc.Sequence))
+		return abci.ErrBaseInvalidSequence.AppendLog(cmn.Fmt("Got %v, expected %v. (acc.seq=%v)", in.Sequence, seq+1, acc.LastTransaction))
 	}
 	// Check amount
 	if !balance.IsGTE(in.Coins) {
@@ -369,16 +282,6 @@ func validateInputAdvanced(acc *types.Account, signBytes []byte, in ttx.TxInput)
 	// Check signatures
 	if !acc.PubKey.VerifyBytes(signBytes, in.Signature) {
 		return abci.ErrBaseInvalidSignature.AppendLog(cmn.Fmt("SignBytes: %X", signBytes))
-	}
-	return abci.OK
-}
-
-func validateOutputsBasic(outs []ttx.TxOutput) (res abci.Result) {
-	for _, out := range outs {
-		// Check TxOutput basic
-		if res := out.ValidateBasic(); res.IsErr() {
-			return res
-		}
 	}
 	return abci.OK
 }
@@ -404,44 +307,18 @@ func validateLikeAdvanced(acc *types.Account, signBytes []byte, like ttx.LikeTx)
 	return abci.OK
 }
 
-func sumOutputs(outs []ttx.TxOutput) (total types.Coins) {
-	for _, out := range outs {
-		total = total.Plus(out.Coins)
+func adjustByInput(state types.AccountSetter, inAcc *types.Account, in ttx.TxInput) {
+	if !inAcc.Balance.IsGTE(in.Coins) {
+		cmn.PanicSanity("adjustByInputs() expects sufficient funds")
 	}
-	return total
+	inAcc.Balance = inAcc.Balance.Minus(in.Coins)
+	inAcc.LastTransaction += 1
+	state.SetAccount(in.Username, inAcc)
 }
 
-func adjustByInputs(state types.AccountSetter, accounts map[string]*types.Account, ins []ttx.TxInput) {
-	for _, in := range ins {
-		acc := accounts[string(in.Address)]
-		if acc == nil {
-			cmn.PanicSanity("adjustByInputs() expects account in accounts")
-		}
-		if !acc.Balance.IsGTE(in.Coins) {
-			cmn.PanicSanity("adjustByInputs() expects sufficient funds")
-		}
-		acc.Balance = acc.Balance.Minus(in.Coins)
-		acc.Sequence += 1
-		state.SetAccount(in.Address, acc)
-	}
-}
-
-func adjustByOutputs(state *State, accounts map[string]*types.Account, outs []ttx.TxOutput, isCheckTx bool) {
-	for _, out := range outs {
-		destChain, outAddress, _ := out.ChainAndAddress() // already validated
-		if destChain != nil {
-			payload := ibc.CoinsPayload{outAddress, out.Coins}
-			ibc.SaveNewIBCPacket(state, state.GetChainID(), string(destChain), payload)
-			continue
-		}
-
-		acc := accounts[string(outAddress)]
-		if acc == nil {
-			cmn.PanicSanity("adjustByOutputs() expects account in accounts")
-		}
-		acc.Balance = acc.Balance.Plus(out.Coins)
-		if !isCheckTx {
-			state.SetAccount(outAddress, acc)
-		}
+func adjustByOutput(state *State, outAcc *types.Account, out ttx.TxOutput, isCheckTx bool) {
+	outAcc.Balance = outAcc.Balance.Plus(out.Coins)
+	if !isCheckTx {
+		state.SetAccount(out.Username, outAcc)
 	}
 }

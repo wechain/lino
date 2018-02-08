@@ -96,9 +96,6 @@ func (a *CliAppTx) ValidateBasic() error {
 		return errors.New("No chain-id specified")
 	}
 	in := a.Tx.Input
-	if len(in.Address) != 20 {
-		return errors.Errorf("Invalid input address length: %d", len(in.Address))
-	}
 	if !in.Coins.IsValid() {
 		return errors.Errorf("Invalid input coins %v", in.Coins)
 	}

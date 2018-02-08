@@ -25,7 +25,7 @@ func TestState(t *testing.T) {
 	dumAddr := []byte("dummyAddress")
 
 	acc := new(types.Account)
-	acc.Sequence = 1
+	acc.LastTransaction = 1
 
 	//reset the store/state/cache
 	reset := func() {
@@ -78,7 +78,7 @@ func TestState(t *testing.T) {
 
 	// Test account retrieve
 	state.SetAccount(dumAddr, acc)
-	assert.Equal(state.GetAccount(dumAddr).Sequence, 1, "GetAccount not retrieving")
+	assert.Equal(state.GetAccount(dumAddr).LastTransaction, 1, "GetAccount not retrieving")
 
 	//Test CacheWrap with local mem store
 	reset()

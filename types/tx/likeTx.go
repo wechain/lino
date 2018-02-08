@@ -5,19 +5,19 @@ import (
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
-	"github.com/tendermint/go-wire/data"
 	. "github.com/tendermint/tmlibs/common"
 	keys "github.com/tendermint/go-crypto/keys"
+	"github.com/lino-network/lino/types"
 )
 
 //-----------------------------------------------------------------------------
 // feature-like
 type LikeTx struct {
-	From      data.Bytes       `json:"from"`      // address
-	To        []byte           `json:"to"`        // post_id
-	Weight    int              `json:"weight"`    // like weight from -10000 to 10000
-	Signature crypto.Signature `json:"signature"` // Depends on the PubKey type and the whole Tx
-	PubKey    crypto.PubKey    `json:"pub_key"`   // Is present iff Sequence == 0
+	From      types.AccountName `json:"from"`      // address
+	To        []byte            `json:"to"`        // post_id
+	Weight    int               `json:"weight"`    // like weight from -10000 to 10000
+	Signature crypto.Signature  `json:"signature"` // Depends on the PubKey type and the whole Tx
+	PubKey    crypto.PubKey     `json:"pub_key"`   // Is present iff Sequence == 0
 }
 
 func (tx *LikeTx) SignBytes(chainID string) []byte {
