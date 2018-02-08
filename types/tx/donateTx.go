@@ -12,7 +12,7 @@ import (
 
 type DonateTx struct {
 	Input     TxInput           `json:"inputTx"` // Hmmm do we want coins?
-    To        types.AccountName `json:"to"`      //post_id
+    To        types.PostID      `json:"to"`      //post_id
     Fee       types.Coin        `json:"fee"`
 }
 

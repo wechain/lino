@@ -1,6 +1,7 @@
 package state
 
 import (
+	"time"
 	abci "github.com/tendermint/abci/types"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/events"
@@ -159,37 +160,40 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			return res
 		}
 		// Get post author account
-		acc := state.GetAccount(tx.Username)
+		acc := state.GetAccount(tx.Author)
 		if acc == nil {
 			return abci.ErrBaseUnknownAddress.AppendLog(
-				cmn.Fmt("Unrecognized username%v", tx.Username))
+				cmn.Fmt("Unrecognized username%v", tx.Author))
 		}
 
 		signBytes := tx.SignBytes(chainID)
 		res = validatePostAdvanced(acc, signBytes, *tx)
 		if res.IsErr() {
-			state.logger.Info(cmn.Fmt("validatePostAdvanced failed on %X: %v", tx.Username, res))
+			state.logger.Info(cmn.Fmt("validatePostAdvanced failed on %X: %v", tx.Author, res))
 			return res.PrependLog("in validatePostAdvanced()")
 		}
-
-		acc.LastPost += 1
 		post := &types.Post {
 			Title: tx.Title,
 			Content: tx.Content,
-			Username: tx.Username,
+			Author: tx.Author,
+			Sequence: tx.Sequence,
 			Parent: tx.Parent,
+			Created: time.Now(),
+			LastUpdate: time.Now(),
+			LastActivity: time.Now(),
+			AllowReplies: true,
+			AllowVotes: true,
 		}
 
+		var parentPost *types.Post
 		if len(tx.Parent) > 0 {
-			parentPost := state.GetPost(tx.Parent)
+			parentPost = state.GetPost(tx.Parent)
 			if parentPost == nil {
 				// TODO change to unknownpost
 				return abci.ErrBaseUnknownAddress
 			}
-			state.UpdateCommentParent(post, parentPost)
 		}
-		state.SetAccount(tx.Username, acc)
-		state.SetPost(types.PostID(tx.Username, acc.LastPost), post)
+		state.PostTxUpdateState(post, acc, parentPost)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
 	case *ttx.DonateTx:
@@ -199,12 +203,6 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		}
         acc := state.GetAccount(tx.Input.Username)
 		if acc == nil {
-			return abci.ErrBaseUnknownAddress
-		}
-
-		post := state.GetPost(tx.To)
-		if post == nil {
-			// TODO change to unknown post error
 			return abci.ErrBaseUnknownAddress
 		}
 
@@ -219,23 +217,29 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			state.logger.Info(cmn.Fmt("Sender did not send enough to cover the fee %X", tx.Input.Username))
 			return abci.ErrBaseInsufficientFunds.AppendLog(cmn.Fmt("input coins is %v, but fee is %v", tx.Input.Coins, tx.Fee))
 		}
-		
+
+		post := state.GetPost(tx.To)
+		if post == nil {
+			// TODO change to unknown post error
+			return abci.ErrBaseUnknownAddress
+		}
+
 		acc.Balance = acc.Balance.Minus(tx.Input.Coins)
 		acc.LastTransaction += 1
 		state.SetAccount(tx.Input.Username, acc)
-		state.UpdateDonatePost(post, acc, tx.Input.Coins)
+		state.DonateTxUpdateState(post, acc, tx.Input.Coins)
 		if isCheckTx {
 			return abci.OK
 		}
 
-		outAcc := state.GetAccount(post.Username)
+		outAcc := state.GetAccount(post.Author)
 		if outAcc == nil {
 			// TODO change to unknown post
 			return abci.ErrBaseUnknownAddress
 		}
 		outCoin := tx.Input.Coins.Minus(types.Coins{tx.Fee})
 		outAcc.Balance = outAcc.Balance.Plus(outCoin)
-		state.SetAccount(post.Username, outAcc)
+		state.SetAccount(post.Author, outAcc)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
 	case *ttx.LikeTx:
@@ -243,35 +247,28 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		if res.IsErr() {
 			return res
 		}
+		account := state.GetAccount(tx.From)
+		if account == nil {
+			return abci.ErrBaseUnknownAddress
+		}
+		signBytes := tx.SignBytes(chainID)
+		res = validateLikeAdvanced(account, signBytes, *tx)
 		// Get post author account
 		post := state.GetPost(tx.To)
 		if post == nil {
 			// TODO change to unknown Post
 			return abci.ErrBaseUnknownAddress
 		}
-		account := state.GetAccount(tx.From)
-		if account == nil {
-			account = &types.Account{}
-		}
-		if account.PubKey.Empty() {
-			if tx.PubKey.Empty() {
-				return abci.ErrBaseUnknownAddress
-			}
-			account.PubKey = tx.PubKey
-		}
-		state.SetAccount(tx.From, account)
-		signBytes := tx.SignBytes(chainID)
-		res = validateLikeAdvanced(account, signBytes, *tx)
 		if res.IsErr() {
 			state.logger.Info(cmn.Fmt("validateLikeAdvanced failed on %X: %v", tx.From, res))
 			return res.PrependLog("in validateLikeAdvanced()")
 		}
-		like := types.Like{
+		like := &types.Like{
 			From   : tx.From,
 			To     : tx.To,
 			Weight : tx.Weight,
 		}
-		state.AddLike(like)
+		state.LikeTxUpdateState(like, account, post)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 	default:
 		return abci.ErrBaseEncodingError.SetLog("Unknown tx type")

@@ -8,9 +8,9 @@ import (
 )
 
 type Like struct {
-	From   []byte `json:"from"`      // address
-	To     []byte     `json:"to"`        // post_id
-	Weight int        `json:"weight"`    // weight
+	From   AccountName `json:"from"`      // address
+	To     PostID      `json:"to"`        // post_id
+	Weight int         `json:"weight"`    // weight
 }
 
 type LikeId []byte
@@ -28,7 +28,9 @@ func (lk *Like) String() string {
 }
 
 func LikeID(from []byte, to []byte) LikeId{
-	return append(from, to...)
+	id := make([]byte, len(from))
+	copy(id, from)
+	return append(id, to...)
 }
 
 func LikeKey(kid []byte) LikeId {
@@ -37,7 +39,7 @@ func LikeKey(kid []byte) LikeId {
 
 // TODO(djj): disallow invalid Like in CheckTx, instead of leave it as no-op.
 
-func GetLikesByPostId(store KVStore, pid []byte) []Like {
+func GetLikesByPostId(store KVStore, pid PostID) []Like {
 	summary := readLikeSummary(store)
 	var likes []Like
 	for _, like_id := range summary.Likes {
@@ -49,10 +51,7 @@ func GetLikesByPostId(store KVStore, pid []byte) []Like {
 }
 
 func AddLike(store KVStore, like Like) {
-	if !doesPostExist(store, like.To) {
-		return
-	}
-	like_id := insertLikeToDb(store, &like)
+	like_id := insertLikeToDb(store, like)
 	summary := readLikeSummary(store)
 	// insert like to db
 	if !likeExist(store, &like, summary) {
@@ -67,8 +66,8 @@ func updateSummary(store KVStore, summary *LikeSummary) {
 	store.Set([]byte(LIKE_SUMMARY_KEY), bytes);
 }
 
-func insertLikeToDb(store KVStore, like *Like) LikeId {
-	bytes := wire.BinaryBytes(like)
+func insertLikeToDb(store KVStore, like Like) LikeId {
+	bytes := wire.BinaryBytes(&like)
 	like_id := LikeID(like.From, like.To)
 	store.Set(LikeKey(like_id), bytes)
 	return like_id
@@ -97,7 +96,7 @@ func GetLike(store KVStore, like_id LikeId) *Like {
 	var like *Like
 	err := wire.ReadBinaryBytes(data, &like)
 	if err != nil {
-		panic("Calling ReadLike using an invalid like_id")
+		panic(err)
 	}
 	return like
 }
@@ -113,8 +112,4 @@ func readLikeSummary(store KVStore) *LikeSummary {
 		panic("ReadLikeSummary is corrupted.")
 	}
 	return summary
-}
-
-func doesPostExist(store KVStore, pid []byte) bool {
-	return GetPost(store, pid) != nil
 }

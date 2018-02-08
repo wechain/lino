@@ -11,11 +11,12 @@ import (
 )
 
 type PostTx struct {
-	Username  types.AccountName `json:"username"`   // Hash of the PubKey
+	Author    types.AccountName `json:"username"`   // Hash of the PubKey
 	Title     string            `json:"title"`
 	Content   string            `json:"content"`
 	Sequence  int               `json:"sequence"`   // Must be 1 greater than the last committed PostTx
 	Parent    []byte            `json:"parent"`
+	Category  []string          `json:"category"`
 	Signature crypto.Signature  `json:"signature"`  // Depends on the PubKey type and the whole Tx
 }
 
@@ -41,7 +42,7 @@ func (tx PostTx) ValidateBasic() abci.Result {
 }
 
 func (tx *PostTx) String() string {
-	return Fmt("PostTx{%v, %v, %v, %v, %v, %v}", tx.Username, tx.Title, tx.Content, tx.Sequence, tx.Parent)
+	return Fmt("PostTx{%v, %v, %v, %v, %v, %v, %v}", tx.Author, tx.Title, tx.Content, tx.Sequence, tx.Parent, tx.Category)
 }
 
 // ============================================================================

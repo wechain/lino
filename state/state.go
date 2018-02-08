@@ -2,6 +2,8 @@ package state
 
 import (
 	"fmt"
+	"time"
+	"reflect"
 	abci "github.com/tendermint/abci/types"
 	"github.com/lino-network/lino/types"
 	eyes "github.com/tendermint/merkleeyes/client"
@@ -89,21 +91,50 @@ func (s *State) SetAccount(username types.AccountName, acc *types.Account) {
 }
 
 // Post
-func (s *State) GetPost(pid []byte) *types.Post {
-	return types.GetPost(s, pid)
+func PostKey(pid types.PostID) []byte {
+	return append([]byte("post/"), pid...)
 }
 
-func (s *State) SetPost(pid []byte, post *types.Post) {
-	types.SetPost(s, pid, post)
+func (s *State) GetPost(pid types.PostID) *types.Post {
+	data := s.Get(PostKey(pid))
+	if len(data) == 0 {
+		return nil
+	}
+	var post *types.Post
+	err := wire.ReadBinaryBytes(data, &post)
+	if err != nil {
+		panic(fmt.Sprintf("Error reading Post %X error: %v",
+			data, err.Error()))
+	}
+	return post
 }
 
-func (s *State) UpdateCommentParent(post *types.Post, parent *types.Post) {
-	fmt.Println("Not implemented yet.", post, parent)
+func (s *State) SetPost(pid types.PostID, post *types.Post) {
+	postBytes := wire.BinaryBytes(post)
+	s.Set(PostKey(pid), postBytes)
+}
+
+func (s *State) PostTxUpdateState(post *types.Post, acc *types.Account, parent *types.Post) {
+	if !reflect.DeepEqual(post.Author, acc.Username) {
+		panic("post author is different with acc username")
+	}
+	acc.LastPost += 1
+	acc.LastAccountUpdate = time.Now()
+	s.SetAccount(acc.Username, acc)
+	s.SetPost(types.GetPostID(post.Author, post.Sequence), post)
+	if parent != nil {
+		if !reflect.DeepEqual(post.Parent, types.GetPostID(parent.Author, parent.Sequence)) {
+			panic("post parent doesn't match")
+		}
+		parent.LastActivity = time.Now()
+		parent.Comments = append(parent.Comments, types.GetPostID(post.Author, post.Sequence))
+		s.SetPost(post.Parent, post)
+	}
 }
 
 // Like
 
-func (s *State) GetLikesByPostId(post_id []byte) []types.Like {
+func (s *State) GetLikesByPostId(post_id types.PostID) []types.Like {
 	return types.GetLikesByPostId(s, post_id);
 }
 
@@ -122,9 +153,24 @@ func (s *State) CacheWrap() *State {
 	}
 }
 
+func (s *State) LikeTxUpdateState(like *types.Like, acc *types.Account, post *types.Post) {
+	if !reflect.DeepEqual(like.From, acc.Username) {
+		panic("Like Username is different with acc username")
+	}
+	if !reflect.DeepEqual(like.To, types.GetPostID(post.Author, post.Sequence)) {
+		panic("Like target post is invald")
+	}
+	acc.LastAccountUpdate = time.Now()
+	post.LastActivity = time.Now()
+	post.Likes = append(post.Likes, like.From)
+	s.SetAccount(acc.Username, acc)
+	s.SetPost(like.To, post)
+	s.AddLike(*like)
+}
+
 // Donate
-func (s *State) UpdateDonatePost(post *types.Post, acc *types.Account, coin types.Coins) {
-	fmt.Println("Not implemented yet.", post, acc, coin)
+func (s *State) DonateTxUpdateState(post *types.Post, inAcc *types.Account, coin types.Coins) {
+	fmt.Println("Not implemented yet.", post, inAcc, coin)
 }
 
 // NOTE: errors if s is not from CacheWrap()

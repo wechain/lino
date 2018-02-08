@@ -15,7 +15,7 @@ type FollowingList []AccountName
 type Account struct {
 	Username          AccountName   `json:"username"`            // Primary Key
 	PubKey            crypto.PubKey `json:"pub_key"`             // May be nil, if not known
-	Metadata          JsonFormat    `json:"Metadata"`            // Json format metadata
+	Metadata          JsonFormat    `json:"metadata"`            // Json format metadata
 	LastAccountUpdate time.Time     `json:"last_account_update"` // Account last update
 	Created           time.Time     `json:"created"`             // Account creation time
 	Mined             bool          `json:"mined"`               // Is mine (Not used now)

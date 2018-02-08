@@ -91,24 +91,15 @@ func MakeSendTx(seq int, accOut types.PrivAccount, accIn types.PrivAccount) *Sen
 }
 
 func MakePostTx(username types.AccountName, seq int, accOut types.PrivAccount) *PostTx {
-	if seq > 1 {
-		return &PostTx{
-			Username: username,
-			Title:    "Title",
-			Content:  "Content",
-			Sequence: seq,
-		}	
-	} else {
-		return &PostTx{
-			Username: username,
+	return &PostTx{
+			Author:   username,
 			Title:    "Title",
 			Content:  "Content",
 			Sequence: seq,
 		}
-	}
 }
 
-func MakeDonateTx(seq int, cost int64, fee int64, to []byte, accsIn types.PrivAccount) *DonateTx {
+func MakeDonateTx(seq int, cost int64, fee int64, to types.PostID, accsIn types.PrivAccount) *DonateTx {
 	tx := &DonateTx{
 		Fee:   types.Coin{"mycoin", fee},
 		Input: NewTxInput(
@@ -120,20 +111,11 @@ func MakeDonateTx(seq int, cost int64, fee int64, to []byte, accsIn types.PrivAc
 	return tx
 }
 
-func MakeLikeTx(weight int, from types.PrivAccount, post_id []byte, is_first_time bool) *LikeTx {
-	if is_first_time {
-		return &LikeTx{
-			From:  from.PubKey.Address(),
-			To: post_id,
-			Weight: weight,
-			PubKey: from.PubKey,
-		}
-	} else {
-		return &LikeTx{
-			From:  from.PubKey.Address(),
-			To: post_id,
-			Weight: weight,
-		}
+func MakeLikeTx(weight int, from types.PrivAccount, post_id types.PostID) *LikeTx {
+	return &LikeTx{
+		From:  from.Account.Username,
+		To: post_id,
+		Weight: weight,
 	}
 }
 

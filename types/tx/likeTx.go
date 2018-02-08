@@ -14,10 +14,9 @@ import (
 // feature-like
 type LikeTx struct {
 	From      types.AccountName `json:"from"`      // address
-	To        []byte            `json:"to"`        // post_id
+	To        types.PostID      `json:"to"`        // post_id
 	Weight    int               `json:"weight"`    // like weight from -10000 to 10000
 	Signature crypto.Signature  `json:"signature"` // Depends on the PubKey type and the whole Tx
-	PubKey    crypto.PubKey     `json:"pub_key"`   // Is present iff Sequence == 0
 }
 
 func (tx *LikeTx) SignBytes(chainID string) []byte {
@@ -35,9 +34,6 @@ func (tx *LikeTx) SetSignature(sig crypto.Signature) bool {
 }
 
 func (tx LikeTx) ValidateBasic() abci.Result {
-	if len(tx.From) != 20 {
-		return abci.ErrBaseInvalidInput.AppendLog("Invalid address length")
-	}
 	if tx.Weight < -10000 || tx.Weight > 10000 {
 		return abci.ErrBaseInvalidInput.AppendLog("Invalid weight")
 	}
@@ -45,8 +41,8 @@ func (tx LikeTx) ValidateBasic() abci.Result {
 }
 
 func (tx *LikeTx) String() string {
-	return Fmt("LikeTx{ set %v from %v to %v. (%v, %v) }",
-		tx.Weight, tx.From, tx.To, tx.Signature, tx.PubKey)
+	return Fmt("LikeTx{ set %v from %v to %v. (%v) }",
+		tx.Weight, tx.From, tx.To, tx.Signature)
 }
 
 // ============================================================================
@@ -69,7 +65,6 @@ func (ltx *CliLikeTx) SignBytes() []byte {
 // will be used for signing
 func (ltx *CliLikeTx) AddSigner(pk crypto.PubKey) {
 	ltx.Tx.From = pk.Address()
-	ltx.Tx.PubKey = pk
 }
 
 // Sign will add a signature and pubkey.
@@ -113,9 +108,6 @@ func (ltx *CliLikeTx) TxBytes() ([]byte, error) {
 func (ltx *CliLikeTx) ValidateBasic() error {
 	if ltx.ChainID == "" {
 		return errors.New("No chain-id specified")
-	}
-	if len(ltx.Tx.From) != 20 {
-		return errors.Errorf("Invalid address length: %d", len(ltx.Tx.From))
 	}
 
 	return nil
