@@ -284,6 +284,30 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		state.LikeTxUpdateState(like, account, post)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
+	case *ttx.ViewTx:
+		res := tx.ValidateBasic()
+		if res.IsErr() {
+			return res
+		}
+		account := state.GetAccount(tx.From)
+		if account == nil {
+			return abci.ErrBaseUnknownAddress
+		}
+		signBytes := tx.SignBytes(chainID)
+		res = validateViewAdvanced(account, signBytes, *tx)
+		// Get post author account
+		if res.IsErr() {
+			state.logger.Info(cmn.Fmt("validateLikeAdvanced failed on %X: %v", tx.From, res))
+			return res.PrependLog("in validateLikeAdvanced()")
+		}
+		post := state.GetPost(tx.To)
+		if post == nil {
+			// TODO change to unknown Post
+			return abci.ErrBaseUnknownAddress
+		}
+		state.ViewTxUpdateState(account, post)
+		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
+
 	case *ttx.FollowTx:
 		res := tx.ValidateBasic()
 		if res.IsErr() {
@@ -353,6 +377,14 @@ func validatePostAdvanced(acc *types.Account, signBytes []byte, post ttx.PostTx)
 func validateLikeAdvanced(acc *types.Account, signBytes []byte, like ttx.LikeTx) (res abci.Result) {
 	// Check signatures
 	if !acc.PubKey.VerifyBytes(signBytes, like.Signature) {
+		return abci.ErrBaseInvalidSignature.AppendLog(cmn.Fmt("SignBytes: %X", signBytes))
+	}
+	return abci.OK
+}
+
+func validateViewAdvanced(acc *types.Account, signBytes []byte, view ttx.ViewTx) (res abci.Result) {
+	// Check signatures
+	if !acc.PubKey.VerifyBytes(signBytes, view.Signature) {
 		return abci.ErrBaseInvalidSignature.AppendLog(cmn.Fmt("SignBytes: %X", signBytes))
 	}
 	return abci.OK

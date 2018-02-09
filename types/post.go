@@ -24,15 +24,16 @@ type Post struct {
 	Reward       Coins         `json:"reward"`
 	Comments     []PostID      `json:"comments"`
 	Likes        []AccountName `json:"likes"`
+	ViewCount    int           `json:"view_count"`
 }
 
 func (post Post) String() string {
 	return fmt.Sprintf(`"author:%v, seq:%v, title:%v, content:%v, category:%v, parent:%v, created:%v, metadata:%v
 		                , last update:%v, last activity:%v, allow replies:%v, allow votes:%v, reward:%v
-		                , comments:%v, likes:%v"`,
+		                , comments:%v, likes:%v", views:%v`,
 					   post.Author, post.Sequence, post.Title, post.Content, post.Category, post.Parent, post.Created, post.Metadata,
 					   post.LastUpdate, post.LastActivity, post.AllowReplies, post.AllowVotes, post.Reward, post.Comments,
-					   post.Likes)
+					   post.Likes, post.ViewCount)
 }
 
 // Post id is computed by the address and sequence.

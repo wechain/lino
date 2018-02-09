@@ -131,6 +131,13 @@ func MakeLikeTx(weight int, from types.PrivAccount, post_id types.PostID) *LikeT
 	}
 }
 
+func MakeViewTx(username types.AccountName, post_id types.PostID) *ViewTx {
+	return &ViewTx{
+		From:   username,
+		To:     post_id,
+	}
+}
+
 func MakeFollowTx(follower types.PrivAccount, following types.PrivAccount, isFollow bool) *FollowTx {
 	return &FollowTx{
 		Follower:  follower.Account.Username,

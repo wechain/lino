@@ -167,6 +167,16 @@ func (s *State) LikeTxUpdateState(like *types.Like, acc *types.Account, post *ty
 	s.AddLike(*like)
 }
 
+// View
+
+func (s *State) ViewTxUpdateState(account *types.Account, post *types.Post) {
+	account.LastAccountUpdate = time.Now()
+	post.ViewCount = post.ViewCount + 1
+	s.SetAccount(account.Username, account)
+	s.SetPost(types.GetPostID(post.Author, post.Sequence), post)
+
+}
+
 // Donate
 func (s *State) DonateTxUpdateState(post *types.Post, inAcc *types.Account, donate types.Coins, fee types.Coin) {
 	inAcc.Balance = inAcc.Balance.Minus(donate)

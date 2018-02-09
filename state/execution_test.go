@@ -54,8 +54,8 @@ func (et *execTest) acc2State(privAccs ...types.PrivAccount) {
 
 //reset everything. state is empty
 func (et *execTest) reset() {
-	et.accIn = ttx.MakeAcc("foo", "foo")
-	et.accOut = ttx.MakeAcc("bar", "bar")
+	et.accIn = ttx.MakeAcc("foofoofoo", "foo")
+	et.accOut = ttx.MakeAcc("barbarbar", "bar")
 
 	et.store = types.NewMemKVStore()
 	et.state = NewState(et.store)
@@ -465,6 +465,48 @@ func TestLikeTx(t *testing.T) {
 	assert.Equal(1, len(likes), "Unexpeted Likes array: %v", likes)
 	assert.Equal(pstID, likes[0].To)
 	assert.Equal(-10000, likes[0].Weight)
+}
+
+func TestViewTx(t *testing.T) {
+	// set up environment
+	assert := assert.New(t)
+	et := newExecTest()
+	seq := 1
+	et.acc2State(et.accOut)
+	pstTx := ttx.MakePostTx(et.accOut.Account.Username, seq, et.accOut)
+	pstID := types.GetPostID(et.accOut.Account.Username, seq)
+	pstSignBytes := pstTx.SignBytes(et.chainID)
+	pstTx.Signature = et.accOut.Sign(pstSignBytes)
+	res := ExecTx(et.state, nil, pstTx, false, nil)
+	assert.True(res.IsOK(), "ExecTx/Good ViewTx: Expected OK return from ExecTx, Error: %v", res)
+
+	// Valid View
+	tx1 := ttx.MakeViewTx(et.accOut.Account.Username, pstID)
+	signBytes := tx1.SignBytes(et.chainID)
+	tx1.Signature = et.accOut.Sign(signBytes)
+	rst := ExecTx(et.state, nil, tx1, false, nil)
+	assert.True(rst.IsOK(), "ViewTx error: %v", rst)
+	post := et.state.GetPost(pstID)
+	assert.Equal(1, post.ViewCount, "Unexpeted post count: %v", post)
+
+	// Invalid Post ID
+	tx1 = ttx.MakeViewTx(et.accOut.Account.Username, []byte("wrong_pid"))
+	signBytes = tx1.SignBytes(et.chainID)
+	tx1.Signature = et.accOut.Sign(signBytes)
+	rst = ExecTx(et.state, nil, tx1, false, nil)
+	assert.Equal(abci.ErrBaseUnknownAddress.Code, rst.Code, "ExecTx/Bad ViewTx: expected error on tx input with bad sequence")
+
+	// Invalid username
+	tx1 = ttx.MakeViewTx([]byte("Invalid Username"), []byte("wrong_pid"))
+	signBytes = tx1.SignBytes(et.chainID)
+	tx1.Signature = et.accOut.Sign(signBytes)
+	rst = ExecTx(et.state, nil, tx1, false, nil)
+	assert.Equal(abci.ErrBaseUnknownAddress.Code, rst.Code, "ExecTx/Bad ViewTx: expected error on tx input with bad sequence")
+
+	// No Signature
+	tx1 = ttx.MakeViewTx(et.accOut.Account.Username, pstID)
+	rst = ExecTx(et.state, nil, tx1, false, nil)
+	assert.Equal(abci.CodeType_BaseInvalidSignature, rst.Code, "ExecTx/Bad ViewTx: expected error on tx input with bad sequence")
 }
 
 func TestFollowTx(t *testing.T) {
