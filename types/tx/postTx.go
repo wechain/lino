@@ -16,6 +16,7 @@ type PostTx struct {
 	Content   string            `json:"content"`
 	Sequence  int               `json:"sequence"`   // Must be 1 greater than the last committed PostTx
 	Parent    []byte            `json:"parent"`
+	Source    types.PostID      `json:"source"`
 	Category  []string          `json:"category"`
 	Signature crypto.Signature  `json:"signature"`  // Depends on the PubKey type and the whole Tx
 }
@@ -42,7 +43,7 @@ func (tx PostTx) ValidateBasic() abci.Result {
 }
 
 func (tx *PostTx) String() string {
-	return Fmt("PostTx{%v, %v, %v, %v, %v, %v, %v}", tx.Author, tx.Title, tx.Content, tx.Sequence, tx.Parent, tx.Category)
+	return Fmt("PostTx{%v, %v, %v, %v, %v, %v, %v, %v}", tx.Author, tx.Title, tx.Content, tx.Sequence, tx.Parent, tx.Source, tx.Category)
 }
 
 // ============================================================================

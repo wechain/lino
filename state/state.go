@@ -113,7 +113,7 @@ func (s *State) SetPost(pid types.PostID, post *types.Post) {
 	s.Set(PostKey(pid), postBytes)
 }
 
-func (s *State) PostTxUpdateState(post *types.Post, acc *types.Account, parent *types.Post) {
+func (s *State) PostTxUpdateState(post *types.Post, acc *types.Account, parent *types.Post, source *types.Post) {
 	if !reflect.DeepEqual(post.Author, acc.Username) {
 		panic("post author is different with acc username")
 	}
@@ -127,7 +127,14 @@ func (s *State) PostTxUpdateState(post *types.Post, acc *types.Account, parent *
 		}
 		parent.LastActivity = time.Now()
 		parent.Comments = append(parent.Comments, types.GetPostID(post.Author, post.Sequence))
-		s.SetPost(post.Parent, post)
+		s.SetPost(post.Parent, parent)
+	}
+	if source != nil {
+		if !reflect.DeepEqual(post.Source, types.GetPostID(source.Author, source.Sequence)) {
+			panic("post source doesn't match")
+		}
+		source.LastActivity = time.Now()
+		s.SetPost(post.Source, source)
 	}
 }
 

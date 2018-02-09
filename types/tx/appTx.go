@@ -13,7 +13,7 @@ import (
 
 type AppTx struct {
 	Gas   int64           `json:"gas"`   // Gas
-	Fee   types.Coin            `json:"fee"`   // Fee
+	Fee   types.Coin      `json:"fee"`   // Fee
 	Name  string          `json:"type"`  // Which plugin
 	Input TxInput         `json:"input"` // Hmmm do we want coins?
 	Data  json.RawMessage `json:"data"`

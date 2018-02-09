@@ -200,20 +200,13 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			state.logger.Info(cmn.Fmt("validatePostAdvanced failed on %X: %v", tx.Author, res))
 			return res.PrependLog("in validatePostAdvanced()")
 		}
-		post := &types.Post {
-			Title: tx.Title,
-			Content: tx.Content,
-			Author: tx.Author,
-			Sequence: tx.Sequence,
-			Parent: tx.Parent,
-			Created: time.Now(),
-			LastUpdate: time.Now(),
-			LastActivity: time.Now(),
-			AllowReplies: true,
-			AllowVotes: true,
+
+		if len(tx.Parent) > 0 && len(tx.Source) > 0 {
+			return abci.ErrBaseInvalidInput
 		}
 
 		var parentPost *types.Post
+		var sourcePost *types.Post
 		if len(tx.Parent) > 0 {
 			parentPost = state.GetPost(tx.Parent)
 			if parentPost == nil {
@@ -221,7 +214,35 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 				return abci.ErrBaseUnknownAddress
 			}
 		}
-		state.PostTxUpdateState(post, acc, parentPost)
+
+		if len(tx.Source) > 0 {
+			sourcePost = state.GetPost(tx.Source)
+			if sourcePost == nil {
+				// TODO change to unknownpost
+				return abci.ErrBaseInvalidInput.AppendLog("Invalid Source Post")
+			}
+			if len(sourcePost.Parent) > 0 || len(sourcePost.Source) > 0 {
+				// TODO change to InvalidOperation
+				return abci.ErrBaseInvalidInput.AppendLog(
+					cmn.Fmt("Source can't be repost and comment: %v", tx))
+			}
+		}
+
+		post := &types.Post {
+			Title: tx.Title,
+			Content: tx.Content,
+			Author: tx.Author,
+			Sequence: tx.Sequence,
+			Parent: tx.Parent,
+			Source: tx.Source,
+			Created: time.Now(),
+			LastUpdate: time.Now(),
+			LastActivity: time.Now(),
+			AllowReplies: true,
+			AllowVotes: true,
+		}
+
+		state.PostTxUpdateState(post, acc, parentPost, sourcePost)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
 	case *ttx.DonateTx:

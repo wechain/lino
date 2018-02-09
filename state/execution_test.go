@@ -305,24 +305,22 @@ func TestPostTx(t *testing.T) {
 	endPostSeq = et.state.GetAccount(et.accOut.Account.Username).LastPost
 	assert.Equal(endPostSeq, initPostSeq + 1)
 
-	// First post
+	// Test comment
 	acc := ttx.MakeAcc("username", "secret")
 	et.acc2State(acc)
 	tx = ttx.MakePostTx(acc.Account.Username, 1, acc)
+	tx.Parent = types.GetPostID(et.accOut.Account.Username, 1)
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = acc.Sign(signBytes)
-	preAcc := et.state.GetAccount(acc.Account.Username)
 
-
-	assert.True(preAcc != nil)
 	res = ExecTx(et.state, nil, tx, false, nil)
 	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
 	endPostSeq = et.state.GetAccount(acc.Account.Username).LastPost
 	assert.Equal(1, endPostSeq)
 
-	// Test comment
+	// Test repost
 	tx = ttx.MakePostTx(acc.Account.Username, 2, acc)
-	tx.Parent = types.GetPostID(acc.Account.Username, 1)
+	tx.Source = types.GetPostID(et.accOut.Account.Username, 1)
 	signBytes = tx.SignBytes(et.chainID)
 	tx.Signature = acc.Sign(signBytes)
 
@@ -330,6 +328,7 @@ func TestPostTx(t *testing.T) {
 	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
 	endPostSeq = et.state.GetAccount(acc.Account.Username).LastPost
 	assert.Equal(2, endPostSeq)
+	assert.Equal(types.GetPostID(et.accOut.Account.Username, 1), et.state.GetPost(types.GetPostID(acc.Account.Username, 2)).Source)
 
 	// Invalid seq no
 	tx = ttx.MakePostTx(et.accOut.Account.Username, 100, et.accOut)
@@ -360,6 +359,40 @@ func TestPostTx(t *testing.T) {
 
 	res = ExecTx(et.state, nil, tx, false, nil)
 	assert.Equal(abci.ErrBaseUnknownAddress.Code, res.Code, "ExecTx/Bad PostTx: expected error on tx input with bad sequence")
+	endPostSeq = et.state.GetAccount(acc.Account.Username).LastPost
+	assert.Equal(2, endPostSeq)
+
+	// Invalid repost source doesn't exist
+	tx = ttx.MakePostTx(acc.Account.Username, 3, acc)
+	tx.Source = []byte("source")
+	signBytes = tx.SignBytes(et.chainID)
+	tx.Signature = acc.Sign(signBytes)
+
+	res = ExecTx(et.state, nil, tx, false, nil)
+	assert.Equal(abci.CodeType_BaseInvalidInput, res.Code, "ExecTx/Bad PostTx: expected error on tx input with bad sequence")
+	endPostSeq = et.state.GetAccount(acc.Account.Username).LastPost
+	assert.Equal(2, endPostSeq)
+
+
+	// Invalid repost source is comment
+	tx = ttx.MakePostTx(acc.Account.Username, 3, acc)
+	tx.Source = types.GetPostID(acc.Account.Username, 1)
+	signBytes = tx.SignBytes(et.chainID)
+	tx.Signature = acc.Sign(signBytes)
+
+	res = ExecTx(et.state, nil, tx, false, nil)
+	assert.Equal(abci.CodeType_BaseInvalidInput, res.Code, "ExecTx/Bad PostTx: expected error on tx input with bad sequence")
+	endPostSeq = et.state.GetAccount(acc.Account.Username).LastPost
+	assert.Equal(2, endPostSeq)
+
+	// Invalid repost source is repost
+	tx = ttx.MakePostTx(acc.Account.Username, 3, acc)
+	tx.Source = types.GetPostID(acc.Account.Username, 2)
+	signBytes = tx.SignBytes(et.chainID)
+	tx.Signature = acc.Sign(signBytes)
+
+	res = ExecTx(et.state, nil, tx, false, nil)
+	assert.Equal(abci.CodeType_BaseInvalidInput, res.Code, "ExecTx/Bad PostTx: expected error on tx input with bad sequence")
 	endPostSeq = et.state.GetAccount(acc.Account.Username).LastPost
 	assert.Equal(2, endPostSeq)
 }
