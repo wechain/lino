@@ -16,6 +16,34 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 
 	// Exec tx
 	switch tx := tx.(type) {
+	case *ttx.RegisterTx:
+		// Validate inputs and outputs, basic
+		res := tx.ValidateBasic()
+		if res.IsErr() {
+			return res.PrependLog("in Input validate basic")
+		}
+		acc := state.GetAccount(tx.Username)
+
+		if acc != nil {
+			// TODO change to UnknownUsername
+			return abci.ErrBaseDuplicateAddress
+		}
+
+		signBytes := tx.SignBytes(chainID)
+		res = validateRegisterAdvance(signBytes, *tx)
+		if res.IsErr() {
+			return res.PrependLog("in validateRegisterAdvanced()")
+		}
+
+		acc = &types.Account{
+			Username: tx.Username,
+			PubKey: tx.PubKey,
+			LastAccountUpdate: time.Now(),
+			Created: time.Now(),
+		}
+		state.SetAccount(tx.Username, acc)
+		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
+
 	case *ttx.SendTx:
 		// Validate inputs and outputs, basic
 		res := tx.Input.ValidateBasic()
@@ -282,6 +310,14 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 	default:
 		return abci.ErrBaseEncodingError.SetLog("Unknown tx type")
 	}
+}
+
+func validateRegisterAdvance(signBytes []byte, tx ttx.RegisterTx) (res abci.Result) {
+	// Check signatures
+	if !tx.PubKey.VerifyBytes(signBytes, tx.Signature) {
+		return abci.ErrBaseInvalidSignature.AppendLog(cmn.Fmt("SignBytes: %X", signBytes))
+	}
+	return abci.OK
 }
 
 func validateInputAdvanced(acc *types.Account, signBytes []byte, in ttx.TxInput) (res abci.Result) {

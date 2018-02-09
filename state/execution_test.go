@@ -156,6 +156,42 @@ func TestAdjustBy(t *testing.T) {
 
 }
 
+func TestRegisterTx(t *testing.T) {
+	assert := assert.New(t)
+	et := newExecTest()
+
+	//Valid register
+	tx, privKey := ttx.MakeRegisterTx("Username", "Username")
+	signBytes := tx.SignBytes(et.chainID)
+	tx.Signature = privKey.Sign(signBytes)
+	res := ExecTx(et.state, nil, tx, false, nil)
+	assert.True(res.IsOK(), "ExecTx/Good RegisterTx: Expected OK return from ExecTx, Error: %v", res)
+	acc := et.state.GetAccount(tx.Username)
+	assert.True(acc != nil, "Register Failed: %v", tx.Username)
+	// TODO need to compare the detail field
+
+	// Invalid Username
+	tx, privKey = ttx.MakeRegisterTx("ss", "Username")
+	res = ExecTx(et.state, nil, tx, false, nil)
+	assert.Equal(abci.CodeType_BaseInvalidInput, res.Code, "ExecTx/Bad RegisterTx: expected error on tx input with bad sequence")
+	acc = et.state.GetAccount(tx.Username)
+	assert.True(acc == nil, "Register Failed: %v", tx.Username)
+
+	//Duplicate Username
+	tx, privKey = ttx.MakeRegisterTx("Username", "Username")
+	res = ExecTx(et.state, nil, tx, false, nil)
+	assert.Equal(abci.CodeType_BaseDuplicateAddress, res.Code, "ExecTx/Good RegisterTx: Expected OK return from ExecTx, Error: %v", res)
+	acc = et.state.GetAccount(tx.Username)
+	assert.True(acc != nil, "Register Failed: %v", tx.Username)
+
+	//Invalid Signature
+	tx, privKey = ttx.MakeRegisterTx("NewUser", "Username")
+	res = ExecTx(et.state, nil, tx, false, nil)
+	assert.Equal(abci.CodeType_BaseInvalidSignature, res.Code, "ExecTx/Good RegisterTx: Expected OK return from ExecTx, Error: %v", res)
+	acc = et.state.GetAccount(tx.Username)
+	assert.True(acc == nil, "Register Failed: %v", tx.Username)
+}
+
 func TestSendTx(t *testing.T) {
 	assert := assert.New(t)
 	et := newExecTest()

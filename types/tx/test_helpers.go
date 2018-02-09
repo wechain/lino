@@ -79,6 +79,18 @@ func Acc2TxOutput(acc types.PrivAccount) TxOutput {
 			types.Coins{{"mycoin", 4}}}
 }
 
+func MakeRegisterTx(username string, secret string) (*RegisterTx, crypto.PrivKey) {
+	privKey :=
+		crypto.GenPrivKeyEd25519FromSecret([]byte(secret)).Wrap()
+	tx := &RegisterTx{
+		Username: types.AccountName([]byte(username)),
+		PubKey: privKey.PubKey(),
+	}
+
+	return tx, privKey
+}
+
+
 func MakeSendTx(seq int, accOut types.PrivAccount, accIn types.PrivAccount) *SendTx {
 	tx := &SendTx{
 		Gas:     0,

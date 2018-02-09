@@ -65,7 +65,6 @@ func (s *State) Set(key []byte, value []byte) {
 	s.store.Set(key, value)
 }
 
-
 // Account
 func AccountKey(username types.AccountName) []byte {
 	return append([]byte("account/"), username...)
