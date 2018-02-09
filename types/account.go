@@ -7,10 +7,9 @@ import (
 )
 
 
-type AccountName   []byte
-type JsonFormat    string
-type FollowerList  []AccountName
-type FollowingList []AccountName
+type AccountName []byte
+type JsonFormat  string
+type AccountList []AccountName
 
 type Account struct {
 	Username          AccountName   `json:"username"`            // Primary Key
@@ -22,8 +21,8 @@ type Account struct {
 	LastTransaction   int           `json:"last_transaction"`    // Transaction sequence
 	Balance           Coins         `json:"coins"`               // Account balance
 	LastPost          int           `json:"last_post"`           // Post sequence
-	FollowerList      []AccountName `json:"follower_list"`       // All followers
-	FollowingList     []AccountName `json:"following_list"`      // All account followed by this account
+	FollowerList      AccountList   `json:"follower_list"`       // All followers
+	FollowingList     AccountList   `json:"following_list"`      // All account followed by this account
 }
 
 func (acc *Account) Copy() *Account {

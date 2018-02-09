@@ -26,6 +26,7 @@ const (
 	TxTypeSend = byte(0x01)
 	TxTypeApp  = byte(0x02)
 	TxTypePost  = byte(0x03)
+	TxTypeFollow  = byte(0x04)
 	TxTypeLike  = byte(0x71)
 	TxTypeDonate = byte(0x80)
 	TxNameSend = "send"
@@ -33,6 +34,7 @@ const (
 	TxNamePost  = "post"
 	TxNameDonate = "donate"
 	TxNameLike = "like"
+	TxNameFollow = "follow"
 )
 
 func (_ *SendTx) AssertIsTx() {}
@@ -49,7 +51,8 @@ func init() {
 		RegisterImplementation(&AppTx{}, TxNameApp, TxTypeApp).
 		RegisterImplementation(&PostTx{}, TxNamePost, TxTypePost).
 		RegisterImplementation(&DonateTx{}, TxNameDonate, TxTypeDonate).
-		RegisterImplementation(&LikeTx{}, TxNameLike, TxTypeLike)
+		RegisterImplementation(&LikeTx{}, TxNameLike, TxTypeLike).
+		RegisterImplementation(&FollowTx{}, TxNameFollow, TxTypeFollow)
 }
 
 // TxS add json serialization to Tx

@@ -173,6 +173,45 @@ func (s *State) DonateTxUpdateState(post *types.Post, inAcc *types.Account, coin
 	fmt.Println("Not implemented yet.", post, inAcc, coin)
 }
 
+// Follow
+
+func (s *State) FollowTxUpdateState(inAcc *types.Account, outAcc *types.Account) {
+	followingList := inAcc.FollowingList
+	if i := UsernameIndexInList(outAcc.Username, followingList); i < 0 {
+		inAcc.FollowingList = append(inAcc.FollowingList, outAcc.Username)
+	}
+
+	followerList := outAcc.FollowerList
+	if i := UsernameIndexInList(inAcc.Username, followerList); i < 0 {
+		outAcc.FollowerList = append(outAcc.FollowerList, inAcc.Username)
+	}
+	s.SetAccount(inAcc.Username, inAcc)
+	s.SetAccount(outAcc.Username, outAcc)
+}
+
+func (s *State) UnfollowTxUpdateState(inAcc *types.Account, outAcc *types.Account) {
+	followingList := inAcc.FollowingList
+	if i := UsernameIndexInList(outAcc.Username, followingList); i >= 0 {
+		inAcc.FollowingList = append(inAcc.FollowingList[:i], inAcc.FollowingList[i+1:]...)
+	}
+
+	followerList := outAcc.FollowerList
+	if i := UsernameIndexInList(inAcc.Username, followerList); i >= 0 {
+		outAcc.FollowerList = append(outAcc.FollowerList[:i], outAcc.FollowerList[i+1:]...)
+	}
+	s.SetAccount(inAcc.Username, inAcc)
+	s.SetAccount(outAcc.Username, outAcc)
+}
+
+func UsernameIndexInList(username types.AccountName, userList types.AccountList) int {
+	for i, user := range userList {
+		if reflect.DeepEqual(username, user) {
+			return i
+		}
+	}
+	return -1
+}
+
 // NOTE: errors if s is not from CacheWrap()
 func (s *State) CacheSync() {
 	s.writeCache.Sync()

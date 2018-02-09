@@ -119,6 +119,14 @@ func MakeLikeTx(weight int, from types.PrivAccount, post_id types.PostID) *LikeT
 	}
 }
 
+func MakeFollowTx(follower types.PrivAccount, following types.PrivAccount, isFollow bool) *FollowTx {
+	return &FollowTx{
+		Follower:  follower.Account.Username,
+		Following: following.Account.Username,
+		IsFollow:  isFollow,
+	}
+}
+
 func SignTx(chainID string, tx *SendTx, acc types.PrivAccount) {
 	signBytes := tx.SignBytes(chainID)
 	tx.Input.Signature = acc.Sign(signBytes)

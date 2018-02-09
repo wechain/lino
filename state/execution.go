@@ -254,14 +254,14 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		signBytes := tx.SignBytes(chainID)
 		res = validateLikeAdvanced(account, signBytes, *tx)
 		// Get post author account
+		if res.IsErr() {
+			state.logger.Info(cmn.Fmt("validateLikeAdvanced failed on %X: %v", tx.From, res))
+			return res.PrependLog("in validateLikeAdvanced()")
+		}
 		post := state.GetPost(tx.To)
 		if post == nil {
 			// TODO change to unknown Post
 			return abci.ErrBaseUnknownAddress
-		}
-		if res.IsErr() {
-			state.logger.Info(cmn.Fmt("validateLikeAdvanced failed on %X: %v", tx.From, res))
-			return res.PrependLog("in validateLikeAdvanced()")
 		}
 		like := &types.Like{
 			From   : tx.From,
@@ -269,6 +269,30 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			Weight : tx.Weight,
 		}
 		state.LikeTxUpdateState(like, account, post)
+		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
+
+	case *ttx.FollowTx:
+		res := tx.ValidateBasic()
+		if res.IsErr() {
+			return res
+		}
+		followerAcc := state.GetAccount(tx.Follower)
+		if followerAcc == nil {
+			return abci.ErrBaseUnknownAddress
+		}
+		signBytes := tx.SignBytes(chainID)
+		res = validateFollowAdvanced(followerAcc, signBytes, *tx)
+		// Get post author account
+		
+		followingAcc := state.GetAccount(tx.Following)
+		if followingAcc == nil {
+			return abci.ErrBaseUnknownAddress
+		}
+		if (tx.IsFollow) {
+			state.FollowTxUpdateState(followerAcc, followingAcc)
+		} else {
+			state.UnfollowTxUpdateState(followerAcc, followingAcc)
+		}
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 	default:
 		return abci.ErrBaseEncodingError.SetLog("Unknown tx type")
@@ -308,6 +332,14 @@ func validatePostAdvanced(acc *types.Account, signBytes []byte, post ttx.PostTx)
 func validateLikeAdvanced(acc *types.Account, signBytes []byte, like ttx.LikeTx) (res abci.Result) {
 	// Check signatures
 	if !acc.PubKey.VerifyBytes(signBytes, like.Signature) {
+		return abci.ErrBaseInvalidSignature.AppendLog(cmn.Fmt("SignBytes: %X", signBytes))
+	}
+	return abci.OK
+}
+
+func validateFollowAdvanced(acc *types.Account, signBytes []byte, ftx ttx.FollowTx) (res abci.Result) {
+	// Check signatures
+	if !acc.PubKey.VerifyBytes(signBytes, ftx.Signature) {
 		return abci.ErrBaseInvalidSignature.AppendLog(cmn.Fmt("SignBytes: %X", signBytes))
 	}
 	return abci.OK

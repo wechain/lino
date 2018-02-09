@@ -396,7 +396,7 @@ func TestLikeTx(t *testing.T) {
 	pstSignBytes := pstTx.SignBytes(et.chainID)
 	pstTx.Signature = et.accOut.Sign(pstSignBytes)
 	res := ExecTx(et.state, nil, pstTx, false, nil)
-	assert.True(res.IsOK(), "ExecTx/Good PostTx: Expected OK return from ExecTx, Error: %v", res)
+	assert.True(res.IsOK(), "ExecTx/Good LikeTx: Expected OK return from ExecTx, Error: %v", res)
 
 	// Valid Like
 	tx1 := ttx.MakeLikeTx(10000, et.accOut, pstID)
@@ -429,4 +429,51 @@ func TestLikeTx(t *testing.T) {
 	assert.Equal(1, len(likes), "Unexpeted Likes array: %v", likes)
 	assert.Equal(pstID, likes[0].To)
 	assert.Equal(-10000, likes[0].Weight)
+}
+
+func TestFollowTx(t *testing.T) {
+	// set up environment
+	assert := assert.New(t)
+	et := newExecTest()
+	et.acc2State(et.accIn, et.accOut)
+
+	// Valid Follow Tx
+	tx := ttx.MakeFollowTx(et.accIn, et.accOut, true)
+	signBytes := tx.SignBytes(et.chainID)
+	tx.Signature = et.accIn.Sign(signBytes)
+	rst := ExecTx(et.state, nil, tx, false, nil)
+	assert.True(rst.IsOK(), "ExecTx/Good FollowTx: Expected OK return from ExecTx, Error: %v", rst)
+	followerAcc := et.state.GetAccount(et.accIn.Account.Username)
+	followingAcc := et.state.GetAccount(et.accOut.Account.Username)
+	assert.Equal(0, UsernameIndexInList(et.accIn.Account.Username, followingAcc.FollowerList))
+	assert.Equal(0, UsernameIndexInList(et.accOut.Account.Username, followerAcc.FollowingList))
+	assert.Equal(-1, UsernameIndexInList(et.accIn.Account.Username, followingAcc.FollowingList))
+	assert.Equal(-1, UsernameIndexInList(et.accOut.Account.Username, followerAcc.FollowerList))
+
+	// Valid Unfollow Tx
+	tx = ttx.MakeFollowTx(et.accIn, et.accOut, false)
+	signBytes = tx.SignBytes(et.chainID)
+	tx.Signature = et.accIn.Sign(signBytes)
+	rst = ExecTx(et.state, nil, tx, false, nil)
+	assert.True(rst.IsOK(), "ExecTx/Good FollowTx: Expected OK return from ExecTx, Error: %v", rst)
+	followerAcc = et.state.GetAccount(et.accIn.Account.Username)
+	followingAcc = et.state.GetAccount(et.accOut.Account.Username)
+	assert.Equal(-1, UsernameIndexInList(et.accIn.Account.Username, followingAcc.FollowerList))
+	assert.Equal(-1, UsernameIndexInList(et.accOut.Account.Username, followerAcc.FollowingList))
+	assert.Equal(-1, UsernameIndexInList(et.accIn.Account.Username, followingAcc.FollowingList))
+	assert.Equal(-1, UsernameIndexInList(et.accOut.Account.Username, followerAcc.FollowerList))
+
+	// Follow Self
+	tx = ttx.MakeFollowTx(et.accIn, et.accIn, true)
+	signBytes = tx.SignBytes(et.chainID)
+	tx.Signature = et.accIn.Sign(signBytes)
+	rst = ExecTx(et.state, nil, tx, false, nil)
+	assert.Equal(abci.CodeType_BaseInvalidInput, rst.Code, "ExecTx/Bad FollowTx: expected error on tx input with bad sequence")
+
+	// Unfollow Self
+	tx = ttx.MakeFollowTx(et.accIn, et.accIn, false)
+	signBytes = tx.SignBytes(et.chainID)
+	tx.Signature = et.accIn.Sign(signBytes)
+	rst = ExecTx(et.state, nil, tx, false, nil)
+	assert.Equal(abci.CodeType_BaseInvalidInput, rst.Code, "ExecTx/Bad FollowTx: expected error on tx input with bad sequence")
 }
