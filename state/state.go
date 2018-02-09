@@ -169,8 +169,14 @@ func (s *State) LikeTxUpdateState(like *types.Like, acc *types.Account, post *ty
 }
 
 // Donate
-func (s *State) DonateTxUpdateState(post *types.Post, inAcc *types.Account, coin types.Coins) {
-	fmt.Println("Not implemented yet.", post, inAcc, coin)
+func (s *State) DonateTxUpdateState(post *types.Post, inAcc *types.Account, donate types.Coins, fee types.Coin) {
+	inAcc.Balance = inAcc.Balance.Minus(donate)
+	inAcc.LastAccountUpdate = time.Now()
+	inAcc.LastTransaction += 1
+	post.Reward = post.Reward.Plus(donate.Minus(types.Coins{fee}))
+	post.LastActivity = time.Now()
+	s.SetAccount(inAcc.Username, inAcc)
+	s.SetPost(types.GetPostID(post.Author, post.Sequence), post)
 }
 
 // Follow

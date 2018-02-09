@@ -380,9 +380,9 @@ func TestDonateTx(t *testing.T) {
 	assert.True(endInputBalance.IsEqual(types.Coins{{"mycoin", initBalance - testCost}}),
 			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", endInputBalance, initBalance - testCost)
 
-	endOutputBalance = et.state.GetAccount(et.accOut.Account.Username).Balance
-	assert.True(endOutputBalance.IsEqual(types.Coins{{"mycoin", initBalance + testCost - testFee}}),
-			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", endOutputBalance, initBalance)
+	endOutputBalance = et.state.GetPost(types.GetPostID(et.accOut.Account.Username, 1)).Reward
+	assert.True(endOutputBalance.IsEqual(types.Coins{{"mycoin", testCost - testFee}}),
+			"ExecTx/Valid DeliverTx: balance should be equal for accIn: got %v, expected: %v", endOutputBalance, testCost - testFee)
 }
 
 func TestLikeTx(t *testing.T) {

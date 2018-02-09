@@ -224,22 +224,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			return abci.ErrBaseUnknownAddress
 		}
 
-		acc.Balance = acc.Balance.Minus(tx.Input.Coins)
-		acc.LastTransaction += 1
-		state.SetAccount(tx.Input.Username, acc)
-		state.DonateTxUpdateState(post, acc, tx.Input.Coins)
-		if isCheckTx {
-			return abci.OK
-		}
-
-		outAcc := state.GetAccount(post.Author)
-		if outAcc == nil {
-			// TODO change to unknown post
-			return abci.ErrBaseUnknownAddress
-		}
-		outCoin := tx.Input.Coins.Minus(types.Coins{tx.Fee})
-		outAcc.Balance = outAcc.Balance.Plus(outCoin)
-		state.SetAccount(post.Author, outAcc)
+		state.DonateTxUpdateState(post, acc, tx.Input.Coins, tx.Fee)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")
 
 	case *ttx.LikeTx:
