@@ -13,8 +13,13 @@ import (
 
 // CONTRACT: State should be quick to copy.
 // See CacheWrap().
+const (
+	REWARD_BLOCK_INTERVAL = 288000 // 10 Days 10*24*3600/3
+)
+
 type State struct {
 	chainID    string
+	height     uint64
 	store      types.KVStore
 	readCache  map[string][]byte // optional, for caching writes to store
 	writeCache *types.KVCache    // optional, for caching writes w/o writing to store
@@ -24,6 +29,7 @@ type State struct {
 func NewState(store types.KVStore) *State {
 	return &State{
 		chainID:    "",
+		height:     uint64(0),
 		store:      store,
 		readCache:  make(map[string][]byte),
 		writeCache: nil,
@@ -135,6 +141,64 @@ func (s *State) PostTxUpdateState(post *types.Post, acc *types.Account, parent *
 		}
 		source.LastActivity = time.Now()
 		s.SetPost(post.Source, source)
+	}
+	s.SetReward(types.GetPostID(post.Author, post.Sequence))
+}
+
+func (s *State) GetRewardKey(height uint64) []byte{
+	return append([]byte("APP/REWARD/"), wire.BinaryBytes(height)...)
+}
+
+func (s *State) GetRewardList(height uint64) []types.PostID{
+	data := s.Get(s.GetRewardKey(height))
+	var postList []types.PostID
+	if len(data) != 0 {
+		//err := json.Unmarshal(data, &postList)	
+		err := wire.ReadBinaryBytes(data, &postList)
+		if err != nil {
+			panic(fmt.Sprintf("Error reading Post List %X error: %v",
+				data, err.Error()))
+		}
+	}
+	return postList
+}
+
+func (s *State) SetRewardList(height uint64, postList []types.PostID) {
+	postListBytes := wire.BinaryBytes(postList)
+	s.Set(s.GetRewardKey(height), postListBytes)
+}
+
+func RewardIndexInList(pid types.PostID, postList []types.PostID) int {
+	for i, postid := range postList {
+		if reflect.DeepEqual(pid, postid) {
+			return i
+		}
+	}
+	return -1
+}
+
+func (s *State) SetReward(pid types.PostID) {
+	postList := s.GetRewardList(s.height + REWARD_BLOCK_INTERVAL)
+	index := RewardIndexInList(pid, postList)
+	if index == -1 {
+		postList = append(postList, pid)
+	}
+	s.SetRewardList(s.height + REWARD_BLOCK_INTERVAL, postList)
+}
+
+func (s *State) IssueReward(height uint64) {
+	postList := s.GetRewardList(height)
+	for _, postid := range postList {
+		post := s.GetPost(postid)
+		if post == nil {
+			panic(fmt.Sprintf("Error issue reward to postid %X", postid))
+		}
+		account := GetAccount(post.Author)
+		if account == nil {
+			panic(fmt.Sprintf("Error issue reward to account %X", account))
+		}
+		account.Balance = account.Balance.Plus(post.Reward)
+		s.SetAccount(account.Username, account)
 	}
 }
 

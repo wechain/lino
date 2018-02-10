@@ -199,6 +199,7 @@ func (app *Linocoin) InitChain(validators []*abci.Validator) {
 
 // ABCI::BeginBlock
 func (app *Linocoin) BeginBlock(hash []byte, header *abci.Header) {
+	app.state.IssueReward(header.Height)
 	for _, plugin := range app.plugins.GetList() {
 		plugin.BeginBlock(app.state, hash, header)
 	}
@@ -206,6 +207,7 @@ func (app *Linocoin) BeginBlock(hash []byte, header *abci.Header) {
 
 // ABCI::EndBlock
 func (app *Linocoin) EndBlock(height uint64) (res abci.ResponseEndBlock) {
+	app.state.height = height
 	for _, plugin := range app.plugins.GetList() {
 		pluginRes := plugin.EndBlock(app.state, height)
 		res.Diffs = append(res.Diffs, pluginRes.Diffs...)

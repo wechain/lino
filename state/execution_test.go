@@ -395,6 +395,14 @@ func TestPostTx(t *testing.T) {
 	assert.Equal(abci.CodeType_BaseInvalidInput, res.Code, "ExecTx/Bad PostTx: expected error on tx input with bad sequence")
 	endPostSeq = et.state.GetAccount(acc.Account.Username).LastPost
 	assert.Equal(2, endPostSeq)
+
+	// Test Reward List
+	rewardList := et.state.GetRewardList(et.state.height + REWARD_BLOCK_INTERVAL)
+	assert.Equal(4, len(rewardList))
+	assert.Equal(0, RewardIndexInList(types.GetPostID(et.accOut.Account.Username, 1), rewardList))
+	assert.Equal(1, RewardIndexInList(types.GetPostID(et.accOut.Account.Username, 2), rewardList))
+	assert.Equal(2, RewardIndexInList(types.GetPostID(acc.Account.Username, 1), rewardList))
+	assert.Equal(3, RewardIndexInList(types.GetPostID(acc.Account.Username, 2), rewardList))
 }
 
 func TestDonateTx(t *testing.T) {
