@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 	"github.com/spf13/cobra"
 
 	wire "github.com/tendermint/go-wire"
@@ -11,6 +12,7 @@ import (
 	"github.com/tendermint/light-client/proofs"
 
 	btypes "github.com/lino-network/lino/types"
+	"github.com/lino-network/lino/state"
 	ttx "github.com/lino-network/lino/types/tx"
 )
 
@@ -20,17 +22,19 @@ var AccountQueryCmd = &cobra.Command{
 	RunE:  lcmd.RequireInit(doAccountQuery),
 }
 
+func init() {
+	flags := AccountQueryCmd.Flags()
+	flags.String(FlagUsername, "", "Username")
+}
+
 func doAccountQuery(cmd *cobra.Command, args []string) error {
-	addr, err := proofcmd.ParseHexKey(args, "address")
-	if err != nil {
-		return err
-	}
-	key := btypes.AccountKey(addr)
+	user := btypes.GetAccountNameFromString(viper.GetString(FlagUsername))
+	key := state.AccountKey(user)
 
 	acc := new(btypes.Account)
 	proof, err := proofcmd.GetAndParseAppProof(key, &acc)
 	if lc.IsNoDataErr(err) {
-		return errors.Errorf("Account bytes are empty for address %X ", addr)
+		return errors.Errorf("Account bytes are empty for address %X ", user)
 	} else if err != nil {
 		return err
 	}

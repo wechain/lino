@@ -2,16 +2,12 @@ package commands
 
 import (
 	"encoding/hex"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	abci "github.com/tendermint/abci/types"
-	wire "github.com/tendermint/go-wire"
-
-	"github.com/lino-network/lino/types"
 
 	client "github.com/tendermint/tendermint/rpc/client"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -112,31 +108,6 @@ func queryWithClient(httpClient *client.HTTP, key []byte) (*abci.ResultQuery, er
 		return nil, errors.Errorf("Query got non-zero exit code: %v. %s", res.Code, res.Log)
 	}
 	return res.ResultQuery, nil
-}
-
-// fetch the account by querying the app
-func getAccWithClient(httpClient *client.HTTP, address []byte) (*types.Account, error) {
-
-	key := types.AccountKey(address)
-	response, err := queryWithClient(httpClient, key)
-	if err != nil {
-		return nil, err
-	}
-
-	accountBytes := response.Value
-
-	if len(accountBytes) == 0 {
-		return nil, fmt.Errorf("Account bytes are empty for address: %X ", address) //never stack trace
-	}
-
-	var acc *types.Account
-	err = wire.ReadBinaryBytes(accountBytes, &acc)
-	if err != nil {
-		return nil, errors.Errorf("Error reading account %X error: %v",
-			accountBytes, err.Error())
-	}
-
-	return acc, nil
 }
 
 func getHeaderAndCommit(tmAddr string, height int) (*tmtypes.Header, *tmtypes.Commit, error) {

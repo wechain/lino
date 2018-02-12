@@ -1,13 +1,9 @@
 package commands
 
 import (
-	"encoding/hex"
-
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/light-client/commands"
 	txcmd "github.com/tendermint/light-client/commands/txs"
 
@@ -28,6 +24,7 @@ var DonateTxCmd = &cobra.Command{
 
 func init() {
 	flags := DonateTxCmd.Flags()
+	flags.String(FlagName, "", "Username")
 	flags.String(FlagPostAuthor, "", "Post author")
 	flags.String(FlagPostSeq, "", "Post sequence of that author")
 	flags.String(FlagAmount, "", "Coins to send in the format <amt><coin>,<amt><coin>...")
@@ -61,21 +58,20 @@ func doDonateTx(cmd *cobra.Command, args []string) error {
 }
 
 func readDonateTxFlags(tx *ttx.DonateTx) error {
-	poster, err := hex.DecodeString(cmn.StripHex(viper.GetString(FlagPostAuthor)))
-	if err != nil {
-		return errors.Wrap(err, "Invalid address")
-	}
-	tx.To = btypes.PostID(poster, viper.GetInt(FlagPostSeq))
-	tx.Fee, err = btypes.ParseCoin(viper.GetString(FlagFee))
+	poster := viper.GetString(FlagPostAuthor)
+	tx.To = btypes.GetPostID(btypes.GetAccountNameFromString(poster), viper.GetInt(FlagPostSeq))
+	fee, err := btypes.ParseCoin(viper.GetString(FlagFee))
 	if err != nil {
 		return err
 	}
+	tx.Fee = fee
 
 	amountCoins, err := btypes.ParseCoins(viper.GetString(FlagAmount))
 	if err != nil {
 		return err
 	}
 	tx.Input = ttx.TxInput{
+		Username: btypes.GetAccountNameFromString(viper.GetString(FlagName)),
 		Coins:    amountCoins,
 		Sequence: viper.GetInt(FlagSequence),
 	}

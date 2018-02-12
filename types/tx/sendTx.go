@@ -71,6 +71,12 @@ func (s *CliSendTx) Signers() ([]crypto.PubKey, error) {
 	}
 	return s.signers, nil
 }
+// AddSigner sets address and pubkey info on the tx based on the key that
+// will be used for signing
+
+func (s *CliSendTx) AddSigner(pk crypto.PubKey) {
+	s.signers = append(s.signers, pk)
+}
 
 // TxBytes returns the transaction data as well as all signatures
 // It should return an error if Sign was never called

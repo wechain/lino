@@ -1,21 +1,14 @@
 package commands
 
 import (
-	"encoding/hex"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	cmn "github.com/tendermint/tmlibs/common"
 	lcmd "github.com/tendermint/light-client/commands"
 	proofcmd "github.com/tendermint/light-client/commands/proofs"
 
 	btypes "github.com/lino-network/lino/types"
-)
-
-//nolint
-const (
-	FlagAddress       = "address"
+	"github.com/lino-network/lino/state"
 )
 
 var PostQueryCmd = &cobra.Command{
@@ -26,20 +19,14 @@ var PostQueryCmd = &cobra.Command{
 
 func init() {
 	flags := PostQueryCmd.Flags()
-	flags.String(FlagPostAuthor, "", "Destination address for the query")
+	flags.String(FlagPostAuthor, "", "Post author")
 	flags.Int(FlagPostSeq, -1, "Sequence number for post")
 }
 
 func doPostQuery(cmd *cobra.Command, args []string) error {
-	poster, err := hex.DecodeString(cmn.StripHex(viper.GetString(FlagPostAuthor)))
-	if err != nil {
-		return errors.Wrap(err, "Invalid address")
-	}
-	if err != nil {
-		return err
-	}
+	poster := btypes.GetAccountNameFromString(viper.GetString(FlagPostAuthor))
 
-	key := btypes.PostKey(btypes.PostID(poster, viper.GetInt(FlagPostSeq)))
+	key := state.PostKey(btypes.GetPostID(poster, viper.GetInt(FlagPostSeq)))
 	post := new(btypes.Post)
 	proof, err := proofcmd.GetAndParseAppProof(key, &post)
 	if err != nil {

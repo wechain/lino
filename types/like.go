@@ -27,7 +27,7 @@ func (lk *Like) String() string {
 	return fmt.Sprintf("Like{%v, %v, %v}", lk.From, lk.To, lk.Weight)
 }
 
-func LikeID(from []byte, to []byte) LikeId{
+func LikeID(from AccountName, to []byte) LikeId{
 	id := make([]byte, len(from))
 	copy(id, from)
 	return append(id, to...)

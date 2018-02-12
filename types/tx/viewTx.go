@@ -51,7 +51,7 @@ func (tx *ViewTx) String() string {
 type CliViewTx struct {
 	ChainID string
 	signers []crypto.PubKey
-	Tx      *LikeTx
+	Tx      *ViewTx
 }
 
 var _ keys.Signable = &CliViewTx{}

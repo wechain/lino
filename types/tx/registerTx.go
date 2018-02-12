@@ -32,8 +32,8 @@ func (tx *RegisterTx) SetSignature(sig crypto.Signature) bool {
 }
 
 func (tx RegisterTx) ValidateBasic() abci.Result {
-	if len(tx.Username) <= 6 {
-		return abci.ErrBaseInvalidInput.AppendLog("Username length must be greater than 6")
+	if len(tx.Username) <= 3 {
+		return abci.ErrBaseInvalidInput.AppendLog("Username length must be greater than 3")
 	}
 	if tx.PubKey.Empty() {
 		return abci.ErrBaseInvalidInput.AppendLog("PubKey empty")
@@ -62,7 +62,8 @@ func (r *CliRegisterTx) SignBytes() []byte {
 
 // AddSigner sets address and pubkey info on the tx based on the key that
 // will be used for signing
-func (r *CliRegisterTx) AddSigner(AccountName, pk crypto.PubKey) {
+func (r *CliRegisterTx) AddSigner(pk crypto.PubKey) {
+	r.Tx.PubKey = pk
 	r.signers = append(r.signers, pk)
 }
 
@@ -72,6 +73,7 @@ func (r *CliRegisterTx) AddSigner(AccountName, pk crypto.PubKey) {
 // Returns error if called with invalid data or too many times
 func (r *CliRegisterTx) Sign(pubkey crypto.PubKey, sig crypto.Signature) error {
 	set := r.Tx.SetSignature(sig)
+	r.Tx.PubKey = pubkey
 	if !set {
 		return errors.Errorf("Cannot add signature for address %X", pubkey)
 	}
@@ -105,8 +107,8 @@ func (r *CliRegisterTx) TxBytes() ([]byte, error) {
 // TODO: this should really be in the basecoin.types SendTx,
 // but that code is too ugly now, needs refactor..
 func (r *CliRegisterTx) ValidateBasic() error {
-	if len(r.Tx.Username) <= 6 {
-		return errors.New("Username length must be greater than 6")
+	if len(r.Tx.Username) <= 3 {
+		return errors.New("Username length must be greater than 3")
 	}
 
 	return nil

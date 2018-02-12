@@ -49,6 +49,9 @@ func main() {
 	tr.AddCommand(bcmd.PostTxCmd)
 	tr.AddCommand(bcmd.LikeTxCmd)
 	tr.AddCommand(bcmd.DonateTxCmd)
+	tr.AddCommand(bcmd.FollowTxCmd)
+	tr.AddCommand(bcmd.RegisterTxCmd)
+	tr.AddCommand(bcmd.ViewTxCmd)
 
 	// Set up the various commands to use
 	BaseCli.AddCommand(

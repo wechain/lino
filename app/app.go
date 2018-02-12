@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"strings"
 
@@ -93,12 +92,9 @@ func (app *Linocoin) SetOption(key string, value string) string {
 				return "Error decoding acc message: " + err.Error()
 			}
 			acc.Balance.Sort()
-			addr, err := acc.GetAddr()
-			if err != nil {
-				return "Invalid address: " + err.Error()
-			}
-			app.state.SetAccount(addr, acc.ToAccount())
-			app.logger.Info("SetAccount", "addr", hex.EncodeToString(addr), "acc", acc)
+			linoAccount := acc.ToAccount()
+			app.state.SetAccount(linoAccount.Username, linoAccount)
+			app.logger.Info("SetAccount", "username", acc.Username)
 
 			return "Success"
 		}
@@ -160,7 +156,7 @@ func (app *Linocoin) Query(reqQuery abci.RequestQuery) (resQuery abci.ResponseQu
 	switch reqQuery.Path {
 		case "/account":
 			reqQuery.Path = "/key"
-			reqQuery.Data = types.AccountKey(reqQuery.Data)
+			reqQuery.Data = sm.AccountKey(reqQuery.Data)
 
 		case "/post":
 			reqQuery.Path = "/key"
@@ -207,7 +203,7 @@ func (app *Linocoin) BeginBlock(hash []byte, header *abci.Header) {
 
 // ABCI::EndBlock
 func (app *Linocoin) EndBlock(height uint64) (res abci.ResponseEndBlock) {
-	app.state.height = height
+	app.state.SetHeight(height)
 	for _, plugin := range app.plugins.GetList() {
 		pluginRes := plugin.EndBlock(app.state, height)
 		res.Diffs = append(res.Diffs, pluginRes.Diffs...)

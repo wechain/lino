@@ -12,47 +12,39 @@ import (
 )
 
 //-------------------------
-// SendTx
+// RegisterTx
 
-// SendTxCmd is CLI command to send tokens between basecoin accounts
-var LikeTxCmd = &cobra.Command{
-	Use:   "like",
-	Short: "like a post based on weight from -10000 to 10000",
-	RunE:  commands.RequireInit(doLikeTx),
+// RegisterTxCmd is CLI command to send tokens between basecoin accounts
+var ViewTxCmd = &cobra.Command{
+	Use:   "view",
+	Short: "record the view behavior",
+	RunE:  commands.RequireInit(doViewTx),
 }
 
-//nolint
-const (
-	FlagPostAuthor = "postauthor"
-	FlagPostSeq    = "postseq"
-	FlagWeight     = "weight"
-)
-
 func init() {
-	flags := LikeTxCmd.Flags()
+	flags := ViewTxCmd.Flags()
 	flags.String(FlagPostAuthor, "", "Post author username")
 	flags.String(FlagName, "", "Username")
 	flags.String(FlagPostSeq, "", "Post sequence of that author")
-	flags.Int(FlagWeight, 0, "Like weight")
 }
 
 // runDemo is an example of how to make a tx
-func doLikeTx(cmd *cobra.Command, args []string) error {
+func doViewTx(cmd *cobra.Command, args []string) error {
 	// load data from json or flags
-	tx := new(ttx.LikeTx)
-	err := readLikeTxFlags(tx)
+	tx := new(ttx.ViewTx)
+	err := readViewTxFlags(tx)
 	if err != nil {
 		return err
 	}
 
 	// Wrap and add signer
-	like := &ttx.CliLikeTx{
+	view := &ttx.CliViewTx{
 		ChainID: commands.GetChainID(),
 		Tx:      tx,
 	}
-	like.AddSigner(txcmd.GetSigner())
+	view.AddSigner(txcmd.GetSigner())
 	// Sign if needed and post.  This it the work-horse
-	bres, err := txcmd.SignAndPostTx(like)
+	bres, err := txcmd.SignAndPostTx(view)
 	if err != nil {
 		return err
 	}
@@ -61,11 +53,10 @@ func doLikeTx(cmd *cobra.Command, args []string) error {
 	return txcmd.OutputTx(bres)
 }
 
-func readLikeTxFlags(tx *ttx.LikeTx) error {
+func readViewTxFlags(tx *ttx.ViewTx) error {
 	//parse the fee and amounts into coin types
 	tx.From = btypes.GetAccountNameFromString(viper.GetString(FlagName))
-	poster := viper.GetString(FlagPostAuthor)
-	tx.To = btypes.GetPostID(btypes.GetAccountNameFromString(poster), viper.GetInt(FlagPostSeq))
-	tx.Weight = viper.GetInt(FlagWeight)
+	poster := btypes.GetAccountNameFromString(viper.GetString(FlagPostAuthor))
+	tx.To = btypes.GetPostID(poster, viper.GetInt(FlagPostSeq))
 	return nil
 }

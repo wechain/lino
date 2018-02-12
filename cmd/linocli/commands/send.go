@@ -39,7 +39,8 @@ const (
 
 func init() {
 	flags := SendTxCmd.Flags()
-	flags.String(FlagTo, "", "Destination address for the bits")
+	flags.String(FlagName, "", "Username")
+	flags.String(FlagTo, "", "Destination username for the bits")
 	flags.String(FlagAmount, "", "Coins to send in the format <amt><coin>,<amt><coin>...")
 	flags.String(FlagFee, "0mycoin", "Coins for the transaction fee of the format <amt><coin>")
 	flags.Int64(FlagGas, 0, "Amount of gas for this transaction")
@@ -79,17 +80,12 @@ func doSendTx(cmd *cobra.Command, args []string) error {
 }
 
 func readSendTxFlags(tx *ttx.SendTx) error {
-	// parse to address
-	to, err := ParseChainAddress(viper.GetString(FlagTo))
-	if err != nil {
-		return err
-	}
-
 	//parse the fee and amounts into coin types
-	tx.Fee, err = btypes.ParseCoin(viper.GetString(FlagFee))
+	fee, err := btypes.ParseCoin(viper.GetString(FlagFee))
 	if err != nil {
 		return err
 	}
+	tx.Fee = fee
 	amountCoins, err := btypes.ParseCoins(viper.GetString(FlagAmount))
 	if err != nil {
 		return err
@@ -99,14 +95,15 @@ func readSendTxFlags(tx *ttx.SendTx) error {
 	tx.Gas = viper.GetInt64(FlagGas)
 
 	// craft the inputs and outputs
-	tx.Inputs = []ttx.TxInput{{
+	tx.Input = ttx.TxInput{
+		Username: btypes.GetAccountNameFromString(viper.GetString(FlagName)),
 		Coins:    amountCoins,
 		Sequence: viper.GetInt(FlagSequence),
-	}}
-	tx.Outputs = []ttx.TxOutput{{
-		Address: to,
+	}
+	tx.Output = ttx.TxOutput{
+		Username: btypes.GetAccountNameFromString(viper.GetString(FlagTo)),
 		Coins:   amountCoins,
-	}}
+	}
 
 	return nil
 }
@@ -149,6 +146,7 @@ func BroadcastAppTx(tx *ttx.AppTx) (*ctypes.ResultBroadcastTxCommit, error) {
 
 // AddAppTxFlags adds flags required by apptx
 func AddAppTxFlags(fs *flag.FlagSet) {
+	fs.String(FlagUsername, "", "Username")
 	fs.String(FlagAmount, "", "Coins to send in the format <amt><coin>,<amt><coin>...")
 	fs.String(FlagFee, "0mycoin", "Coins for the transaction fee of the format <amt><coin>")
 	fs.Int64(FlagGas, 0, "Amount of gas for this transaction")
@@ -175,24 +173,11 @@ func ReadAppTxFlags() (gas int64, fee btypes.Coin, txInput ttx.TxInput, err erro
 		return
 	}
 
-	// get the PubKey of the signer
-	pk := txcmd.GetSigner()
-
-	// get addr if available
-	var addr []byte
-	if !pk.Empty() {
-		addr = pk.Address()
-	}
-
 	// set the output
 	txInput = ttx.TxInput{
 		Coins:    amount,
 		Sequence: viper.GetInt(FlagSequence),
-		Address:  addr,
-	}
-	// set the pubkey if needed
-	if txInput.Sequence == 1 {
-		txInput.PubKey = pk
+		Username:  btypes.GetAccountNameFromString(viper.GetString(FlagUsername)),
 	}
 	return
 }

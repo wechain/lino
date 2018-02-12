@@ -41,6 +41,10 @@ func (s *State) SetLogger(l log.Logger) {
 	s.logger = l
 }
 
+func (s *State) SetHeight(height uint64) {
+	s.height = height
+}
+
 func (s *State) SetChainID(chainID string) {
 	s.chainID = chainID
 	s.store.Set([]byte("base/chain_id"), []byte(chainID))
@@ -193,7 +197,7 @@ func (s *State) IssueReward(height uint64) {
 		if post == nil {
 			panic(fmt.Sprintf("Error issue reward to postid %X", postid))
 		}
-		account := GetAccount(post.Author)
+		account := s.GetAccount(post.Author)
 		if account == nil {
 			panic(fmt.Sprintf("Error issue reward to account %X", account))
 		}

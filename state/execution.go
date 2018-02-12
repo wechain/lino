@@ -40,6 +40,7 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			PubKey: tx.PubKey,
 			LastAccountUpdate: time.Now(),
 			Created: time.Now(),
+			Balance: types.Coins{{"mycoin", 10}},
 		}
 		state.SetAccount(tx.Username, acc)
 		return abci.NewResultOK(ttx.TxID(chainID, tx), "")

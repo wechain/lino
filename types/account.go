@@ -53,6 +53,10 @@ type PrivAccount struct {
 
 //----------------------------------------
 
+func GetAccountNameFromString(username string) AccountName {
+	return AccountName([]byte(username))
+}
+
 type AccountGetter interface {
 	GetAccount(username AccountName) *Account
 }

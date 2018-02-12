@@ -8,8 +8,7 @@ To keep things clear, let's have two shells...
 
 ```
 % export BCHOME=~/.democli
-% linocli keys new cool
-% linocli keys get cool -o json
+% linocli keys new coolcool
 ```
 
 And set up a few more keys for fun...
@@ -17,15 +16,13 @@ And set up a few more keys for fun...
 ```
 % linocli keys new friend
 % linocli keys list
-% ME=$(linocli keys get cool | awk '{print $2}')
-% YOU=$(linocli keys get friend | awk '{print $2}')
 ```
 
 ## Set up a clean linocoin, initialized with your account
 
 ```
 $ export BCHOME=~/.demoserve
-$ linocoin init $ME
+$ linocoin init
 $ linocoin start
 ```
 
@@ -35,11 +32,16 @@ $ linocoin start
 % linocli init --chain-id test_chain_id --node tcp://localhost:46657
 ```
 
+## Register
+
+```
+% linocli tx register --name=friend
+```
+
 ## Check your balances...
 
 ```
-% linocli query account $ME
-% linocli query account $YOU
+% linocli query account --username friend
 ```
 
 ## Send the money
@@ -54,29 +56,29 @@ $ linocoin start
 ## Send a post
 
 ```
-% linocli tx post --name cool --title title --postSeq 1 --content asdf
+% linocli tx post --name=tuyukai --title=yukaitu --content=tuyukai --postseq=1
 ```
 
 ## Query a post
 
 ```
-% linocli query post --postAuthor=$ME --postSeq=1
+% linocli query post --postauthor=tuyukai --postseq=1
 ```
 
 ## Like a post
 
 ```
-% linocli tx like --postAuthor=$ME --postSeq=1 weight=100 --name=cool
+% linocli tx like --postauthor=tuyukai --postseq=1 --weight=100 --name=tuyukai
 ```
 
 ## Query a like
 
 ```
-% linocli query like --address=$ME --postAuthor=$ME --postSeq=1
+% linocli query like --username=tuyukai --postauthor=tuyukai --postseq=1
 ```
 
 ## Donate a post
 
 ```
-% linocli tx donate --name=cool --postAuthor=$ME --amount=100mycoin --sequence=1 --postSeq=1
+% linocli tx donate --name=cool --postauthor=tuyukai --amount=100mycoin --sequence=1 --postseq=1
 ```

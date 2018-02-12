@@ -1,13 +1,11 @@
 package commands
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	tcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
@@ -54,25 +52,12 @@ func initCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if len(args) != 1 {
-		return fmt.Errorf("`init` takes one argument, a linocoin account address. Generate one using `linocli keys new mykey`")
-	}
-	userAddr := args[0]
-	// verify this account is correct
-	data, err := hex.DecodeString(StripHex(userAddr))
-	if err != nil {
-		return errors.Wrap(err, "Invalid address")
-	}
-	if len(data) != 20 {
-		return errors.New("Address must be 20-bytes in hex")
-	}
-
 	// initalize linocoin
 	genesisFile := cfg.GenesisFile()
 	privValFile := cfg.PrivValidatorFile()
 	keyFile := path.Join(cfg.RootDir, "key.json")
 
-	mod1, err := setupFile(genesisFile, GetGenesisJSON(chainIDFlag, userAddr), 0644)
+	mod1, err := setupFile(genesisFile, GetGenesisJSON(chainIDFlag), 0644)
 	if err != nil {
 		return err
 	}
@@ -115,7 +100,7 @@ var PrivValJSON = `{
 // GetGenesisJSON returns a new tendermint genesis with Linocoin app_options
 // that grant a large amount of "mycoin" to a single address
 // TODO: A better UX for generating genesis files
-func GetGenesisJSON(chainID, addr string) string {
+func GetGenesisJSON(chainID string) string {
 	return fmt.Sprintf(`{
   "app_hash": "",
   "chain_id": "%s",
@@ -129,19 +114,8 @@ func GetGenesisJSON(chainID, addr string) string {
         "data": "7B90EA87E7DC0C7145C8C48C08992BE271C7234134343E8A8E8008E617DE7B30"
       }
     }
-  ],
-  "app_options": {
-    "accounts": [{
-      "address": "%s",
-      "coins": [
-        {
-          "denom": "mycoin",
-          "amount": 9007199254740992
-        }
-      ]
-    }]
-  }
-}`, chainID, addr)
+  ]
+}`, chainID)
 }
 
 // TODO: remove this once not needed for relay

@@ -1,14 +1,13 @@
 package app
 
 import (
-	"bytes"
+	"time"
 	"encoding/json"
 
 	"github.com/pkg/errors"
 
 	"github.com/lino-network/lino/types"
 	crypto "github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-wire/data"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
@@ -110,36 +109,19 @@ func parseGenesisList(kvz_ []json.RawMessage) (kvz []keyValue, err error) {
 /**** code to parse accounts from genesis docs ***/
 
 type GenesisAccount struct {
-	Address data.Bytes `json:"address"`
+	Username string        `json:"username"`
 	// this from types.Account (don't know how to embed this properly)
 	PubKey   crypto.PubKey `json:"pub_key"` // May be nil, if not known.
-	Sequence int           `json:"sequence"`
 	Balance  types.Coins   `json:"coins"`
 }
 
 func (g GenesisAccount) ToAccount() *types.Account {
 	return &types.Account{
+		Username: types.GetAccountNameFromString(g.Username),
 		PubKey:   g.PubKey,
-		Sequence: g.Sequence,
 		Balance:  g.Balance,
+		LastAccountUpdate: time.Now(),
+		Created: time.Now(),
 	}
 }
 
-func (g GenesisAccount) GetAddr() ([]byte, error) {
-	noAddr, noPk := len(g.Address) == 0, g.PubKey.Empty()
-
-	if noAddr {
-		if noPk {
-			return nil, errors.New("No address given")
-		}
-		return g.PubKey.Address(), nil
-	}
-	if noPk { // but is addr...
-		return g.Address, nil
-	}
-	// now, we have both, make sure they check out
-	if bytes.Equal(g.Address, g.PubKey.Address()) {
-		return g.Address, nil
-	}
-	return nil, errors.New("Address and pubkey don't match")
-}

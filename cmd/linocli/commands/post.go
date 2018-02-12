@@ -1,12 +1,10 @@
 package commands
 
 import (
-	"encoding/hex"
-
+	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/light-client/commands"
 	txcmd "github.com/tendermint/light-client/commands/txs"
 
@@ -26,15 +24,22 @@ var PostTxCmd = &cobra.Command{
 
 //nolint
 const (
-	FlagTitle      = "title"
-	FlagContent    = "content"
-	FlagParentAddr = "parentaddr"
-	FlagParentSeq  = "parentseq"
+	FlagTitle        = "title"
+	FlagContent      = "content"
+	FlagParentAuthor = "parentauthor"
+	FlagParentSeq    = "parentseq"
+	FlagSourceAuthor = "sourceauthor"
+	FlagSourceSeq    = "sourceseq"
 )
 
 func init() {
 	flags := PostTxCmd.Flags()
-	flags.String(FlagTitle, "", "Post Title")
+	flags.String(FlagName, "", "Username")
+	flags.String(FlagParentAuthor, "", "Parent post author")
+	flags.Int(FlagParentSeq, -1, "Parent post sequence")
+	flags.String(FlagSourceAuthor, "", "Source post author")
+	flags.Int(FlagSourceSeq, -1, "Source post sequence")
+	flags.String(FlagTitle, "", "Post title")
 	flags.String(FlagContent, "", "Post content")
 	flags.Int(FlagPostSeq, -1, "Sequence number for this post")
 }
@@ -53,6 +58,7 @@ func doPostTx(cmd *cobra.Command, args []string) error {
 		ChainID: commands.GetChainID(),
 		Tx:      tx,
 	}
+	fmt.Println(post)
 	post.AddSigner(txcmd.GetSigner())
 	// Sign if needed and post.  This it the work-horse
 	bres, err := txcmd.SignAndPostTx(post)
@@ -65,10 +71,15 @@ func doPostTx(cmd *cobra.Command, args []string) error {
 }
 
 func readPostTxFlags(tx *ttx.PostTx) error {
-	parentAddr, parentAddrErr := hex.DecodeString(cmn.StripHex(FlagParentAddr))
-	if parentAddrErr == nil {
-		// Set parent post
-		tx.Parent = btypes.PostID(parentAddr, viper.GetInt(FlagParentSeq))
+	username := viper.GetString(FlagName)
+	tx.Author = btypes.GetAccountNameFromString(username)
+	parentAuthor := viper.GetString(FlagParentAuthor)
+	if len(parentAuthor) > 0 {
+		tx.Parent = btypes.GetPostID(btypes.GetAccountNameFromString(parentAuthor), viper.GetInt(FlagParentSeq))
+	}
+	sourceAuthor := viper.GetString(FlagSourceAuthor)
+	if len(sourceAuthor) > 0 {
+		tx.Source = btypes.GetPostID(btypes.GetAccountNameFromString(sourceAuthor), viper.GetInt(FlagSourceSeq))
 	}
 	tx.Title = viper.GetString(FlagTitle)
 	tx.Content = viper.GetString(FlagContent)

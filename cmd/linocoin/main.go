@@ -13,7 +13,6 @@ func main() {
 	rt.AddCommand(
 		commands.InitCmd,
 		commands.StartCmd,
-		commands.RelayCmd,
 		commands.UnsafeResetAllCmd,
 		commands.VersionCmd,
 	)

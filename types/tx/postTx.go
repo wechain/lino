@@ -15,7 +15,7 @@ type PostTx struct {
 	Title     string            `json:"title"`
 	Content   string            `json:"content"`
 	Sequence  int               `json:"sequence"`   // Must be 1 greater than the last committed PostTx
-	Parent    []byte            `json:"parent"`
+	Parent    types.PostID      `json:"parent"`
 	Source    types.PostID      `json:"source"`
 	Category  []string          `json:"category"`
 	Signature crypto.Signature  `json:"signature"`  // Depends on the PubKey type and the whole Tx
@@ -63,7 +63,7 @@ func (p *CliPostTx) SignBytes() []byte {
 
 // AddSigner sets address and pubkey info on the tx based on the key that
 // will be used for signing
-func (p *CliPostTx) AddSigner(AccountName, pk crypto.PubKey) {
+func (p *CliPostTx) AddSigner(pk crypto.PubKey) {
 	p.signers = append(p.signers, pk)
 }
 
