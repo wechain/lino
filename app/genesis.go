@@ -1,7 +1,6 @@
 package app
 
 import (
-	"time"
 	"encoding/json"
 
 	"github.com/pkg/errors"
@@ -120,8 +119,8 @@ func (g GenesisAccount) ToAccount() *types.Account {
 		Username: types.GetAccountNameFromString(g.Username),
 		PubKey:   g.PubKey,
 		Balance:  g.Balance,
-		LastAccountUpdate: time.Now(),
-		Created: time.Now(),
+		LastAccountUpdate: 1,
+		Created: 1,
 	}
 }
 

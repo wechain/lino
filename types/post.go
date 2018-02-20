@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"time"
 	"github.com/tendermint/go-wire"
 )
 
@@ -16,10 +15,10 @@ type Post struct {
 	Sequence     int           `json:"sequence"`
 	Parent       PostID        `json:"parent"` // non-empty if it is a comment.
 	Source       PostID        `json:"source"` // non-empty if it is a reblog
-	Created      time.Time     `json:"created"`
+	Created      uint64     `json:"created"`
 	Metadata     JsonFormat    `json:"metadata"`
-	LastUpdate   time.Time     `json:"last_update"`
-	LastActivity time.Time     `json:"last_activitu"`
+	LastUpdate   uint64     `json:"last_update"`
+	LastActivity uint64     `json:"last_activitu"`
 	AllowReplies bool          `json:"allow_replies"`
 	AllowVotes   bool          `json:"allow_votes"`
 	Reward       Coins         `json:"reward"`

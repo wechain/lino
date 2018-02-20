@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"time"
 	"reflect"
 	abci "github.com/tendermint/abci/types"
 	"github.com/lino-network/lino/types"
@@ -43,6 +42,10 @@ func (s *State) SetLogger(l log.Logger) {
 
 func (s *State) SetHeight(height uint64) {
 	s.height = height
+}
+
+func (s *State) Height() uint64{
+	return s.height
 }
 
 func (s *State) SetChainID(chainID string) {
@@ -128,14 +131,14 @@ func (s *State) PostTxUpdateState(post *types.Post, acc *types.Account, parent *
 		panic("post author is different with acc username")
 	}
 	acc.LastPost += 1
-	acc.LastAccountUpdate = time.Now()
+	acc.LastAccountUpdate = s.height
 	s.SetAccount(acc.Username, acc)
 	s.SetPost(types.GetPostID(post.Author, post.Sequence), post)
 	if parent != nil {
 		if !reflect.DeepEqual(post.Parent, types.GetPostID(parent.Author, parent.Sequence)) {
 			panic("post parent doesn't match")
 		}
-		parent.LastActivity = time.Now()
+		parent.LastActivity = s.height
 		parent.Comments = append(parent.Comments, types.GetPostID(post.Author, post.Sequence))
 		s.SetPost(post.Parent, parent)
 	}
@@ -143,7 +146,7 @@ func (s *State) PostTxUpdateState(post *types.Post, acc *types.Account, parent *
 		if !reflect.DeepEqual(post.Source, types.GetPostID(source.Author, source.Sequence)) {
 			panic("post source doesn't match")
 		}
-		source.LastActivity = time.Now()
+		source.LastActivity = s.height
 		s.SetPost(post.Source, source)
 	}
 	s.SetReward(types.GetPostID(post.Author, post.Sequence))
@@ -234,8 +237,8 @@ func (s *State) LikeTxUpdateState(like *types.Like, acc *types.Account, post *ty
 	if !reflect.DeepEqual(like.To, types.GetPostID(post.Author, post.Sequence)) {
 		panic("Like target post is invald")
 	}
-	acc.LastAccountUpdate = time.Now()
-	post.LastActivity = time.Now()
+	acc.LastAccountUpdate = s.height
+	post.LastActivity = s.height
 	post.Likes = append(post.Likes, like.From)
 	s.SetAccount(acc.Username, acc)
 	s.SetPost(like.To, post)
@@ -245,7 +248,7 @@ func (s *State) LikeTxUpdateState(like *types.Like, acc *types.Account, post *ty
 // View
 
 func (s *State) ViewTxUpdateState(account *types.Account, post *types.Post) {
-	account.LastAccountUpdate = time.Now()
+	account.LastAccountUpdate = s.height
 	post.ViewCount = post.ViewCount + 1
 	s.SetAccount(account.Username, account)
 	s.SetPost(types.GetPostID(post.Author, post.Sequence), post)
@@ -255,10 +258,10 @@ func (s *State) ViewTxUpdateState(account *types.Account, post *types.Post) {
 // Donate
 func (s *State) DonateTxUpdateState(post *types.Post, inAcc *types.Account, donate types.Coins, fee types.Coin) {
 	inAcc.Balance = inAcc.Balance.Minus(donate)
-	inAcc.LastAccountUpdate = time.Now()
+	inAcc.LastAccountUpdate = s.height
 	inAcc.LastTransaction += 1
 	post.Reward = post.Reward.Plus(donate.Minus(types.Coins{fee}))
-	post.LastActivity = time.Now()
+	post.LastActivity = s.height
 	s.SetAccount(inAcc.Username, inAcc)
 	s.SetPost(types.GetPostID(post.Author, post.Sequence), post)
 }

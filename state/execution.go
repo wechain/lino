@@ -1,7 +1,6 @@
 package state
 
 import (
-	"time"
 	abci "github.com/tendermint/abci/types"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/events"
@@ -38,8 +37,8 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 		acc = &types.Account{
 			Username: tx.Username,
 			PubKey: tx.PubKey,
-			LastAccountUpdate: time.Now(),
-			Created: time.Now(),
+			LastAccountUpdate: state.Height(),
+			Created: state.Height(),
 			Balance: types.Coins{{"mycoin", 10}},
 		}
 		state.SetAccount(tx.Username, acc)
@@ -236,9 +235,9 @@ func ExecTx(state *State, pgz *types.Plugins, tx ttx.Tx, isCheckTx bool, evc eve
 			Sequence: tx.Sequence,
 			Parent: tx.Parent,
 			Source: tx.Source,
-			Created: time.Now(),
-			LastUpdate: time.Now(),
-			LastActivity: time.Now(),
+			Created: state.Height(),
+			LastUpdate: state.Height(),
+			LastActivity: state.Height(),
 			AllowReplies: true,
 			AllowVotes: true,
 		}

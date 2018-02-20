@@ -2,7 +2,6 @@ package types
 
 import (
 	"fmt"
-	"time"
 	"github.com/tendermint/go-crypto"
 )
 
@@ -15,8 +14,8 @@ type Account struct {
 	Username          AccountName   `json:"username"`            // Primary Key
 	PubKey            crypto.PubKey `json:"pub_key"`             // May be nil, if not known
 	Metadata          JsonFormat    `json:"metadata"`            // Json format metadata
-	LastAccountUpdate time.Time     `json:"last_account_update"` // Account last update
-	Created           time.Time     `json:"created"`             // Account creation time
+	LastAccountUpdate uint64     `json:"last_account_update"` // Account last update height
+	Created           uint64     `json:"created"`             // Account creation height
 	Mined             bool          `json:"mined"`               // Is mine (Not used now)
 	LastTransaction   int           `json:"last_transaction"`    // Transaction sequence
 	Balance           Coins         `json:"coins"`               // Account balance
