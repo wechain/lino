@@ -13,15 +13,20 @@ type AccountList []AccountName
 type Account struct {
 	Username          AccountName   `json:"username"`            // Primary Key
 	PubKey            crypto.PubKey `json:"pub_key"`             // May be nil, if not known
+	PostKey           crypto.PrivKey `json:"priv_key"`           // Post priv key
 	Metadata          JsonFormat    `json:"metadata"`            // Json format metadata
-	LastAccountUpdate uint64     `json:"last_account_update"` // Account last update height
-	Created           uint64     `json:"created"`             // Account creation height
+	LastAccountUpdate uint64     `json:"last_account_update"`    // Account last update height
+	Created           uint64     `json:"created"`                // Account creation height
 	Mined             bool          `json:"mined"`               // Is mine (Not used now)
 	LastTransaction   int           `json:"last_transaction"`    // Transaction sequence
 	Balance           Coins         `json:"coins"`               // Account balance
 	LastPost          int           `json:"last_post"`           // Post sequence
 	FollowerList      AccountList   `json:"follower_list"`       // All followers
 	FollowingList     AccountList   `json:"following_list"`      // All account followed by this account
+	PowerRatio        uint       `json:"power_ratio"`         // Power ratio from 0 to 864000
+	PowerRatioBase uint64     `json:"last_power_ratio_height"` // Last height the ratio updated
+	ActivityLimit     uint        `json:"activity_limit"`        // Activity Limitation
+	AcitivityLimitBase uint64  `json:"last_activity_limit_update"` // Last height the activity updated
 }
 
 func (acc *Account) Copy() *Account {
