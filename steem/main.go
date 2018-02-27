@@ -29,6 +29,9 @@ const (
 	TxTypeTransfer = "transfer"
 
 	ChainID = "lino"
+
+
+	ctypeFollow = "follow"
 )
 
 func getBlock(height uint) map[string]interface{}{
@@ -51,12 +54,7 @@ func getBlock(height uint) map[string]interface{}{
 	return result
 }
 
-// [vote map[author:pfunk permlink:smart-money-rebranding-cryptocurrency-for-mass-appeal
-// weight:10000 voter:pirates]]
 
-// [custom_json map[required_auths:[]
-// required_posting_auths:[tincho] id:follow
-// json:["follow",{"follower":"tincho","following":"walden","what":[]}]]]
 
 // [transfer map[memo:{"type":"withdrawal",
 // "tx_id":"9E4C41C575722676CD64EA9AF33F89CCDF5AC91C534452051F80473680AAE145",
@@ -95,10 +93,118 @@ func printTxType(height uint, client *redis.Client) {
 				sendAccountCreateTx(opList[1].(map[string]interface{}), client)
 			case TxTypeComment:
 				sendPostTx(opList[1].(map[string]interface{}), client)
+			case TxTypeCostomJson:
+				costomJson(opList[1].(map[string]interface{}), client)
+			case TxTypeVote:
+				sendVoteTx(opList[1].(map[string]interface{}), client)
 			default:
 			}
 		}
 	}
+}
+
+
+// [vote map[author:pfunk permlink:smart-money-rebranding-cryptocurrency-for-mass-appeal
+// weight:10000 voter:pirates]]
+
+func sendVoteTx(ops map[string]interface{}, client *redis.Client) error {
+	voter, ok := ops["voter"].(string)
+	if !ok {
+		return nil
+	}
+	author, ok := ops["author"].(string)
+	if !ok {
+		return nil
+	}
+
+	privKey, err := GetOrSetPrivKey(voter, client)
+	if err != nil {
+		return err
+	}
+
+	seq, err := client.Get(ops["permlink"].(string)).Result()
+	if err != nil {
+		return err
+	}
+
+	seqNo, err := strconv.Atoi(seq)
+	if err != nil {
+		log.Error().Err(err).Msgf("Lino Redis: Post AtoI failed")
+		return err
+	}
+	tx := new(ttx.LikeTx)
+	tx.From = btypes.AccountName([]byte(voter))
+	tx.To = btypes.GetPostID(btypes.GetAccountNameFromString(author), seqNo)
+	tx.Weight = int(ops["weight"].(float64))
+
+	// Wrap and add signer
+	likeTx := &ttx.CliLikeTx{
+		ChainID: ChainID,
+		Tx:      tx,
+	}
+
+	bres, err := SignAndBroadcast(likeTx, *privKey)
+	if err == nil && bres.CheckTx.Code == atypes.CodeType_OK {
+		log.Debug().Msgf("voter %v votes %v with seq %v, weight: %v", voter, author, seqNo, tx.Weight)
+	}
+	fmt.Println(bres)
+	return nil
+}
+
+// [custom_json map[required_auths:[]
+// required_posting_auths:[tincho] id:follow
+// json:["follow",{"follower":"tincho","following":"walden","what":[]}]]]
+
+func costomJson(ops map[string]interface{}, client *redis.Client) error {
+	log.Debug().Msgf("costom Json: %v", ops)
+	costomizeOp, ok := ops["json"].([]interface{})
+	if !ok {
+		return nil
+	}
+	switch costomizeOp[0] {
+	case ctypeFollow:
+		followMp := costomizeOp[1].(map[string]interface{})
+		return sendFollowTx(followMp, client)
+	default:
+		log.Debug().Msgf("ctype unrecognized: %v", costomizeOp[0])
+	}
+	return nil
+}
+
+func sendFollowTx(ops map[string]interface{}, client *redis.Client) error {
+	follower, ok := ops["follower"].(string)
+	if !ok {
+		return nil
+	}
+	following, ok := ops["following"].(string)
+	if !ok {
+		return nil
+	}
+
+	privKey, err := GetOrSetPrivKey(follower, client)
+	if err != nil {
+		return err
+	}
+
+	tx := new(ttx.FollowTx)
+	tx.Follower = btypes.GetAccountNameFromString(follower)
+	tx.Following = btypes.GetAccountNameFromString(following)
+	tx.IsFollow = true
+
+	followTx := &ttx.CliFollowTx{
+		ChainID: ChainID,
+		Tx:      tx,
+	}
+	bres, err := SignAndBroadcast(followTx, *privKey)
+	if err != nil {
+		log.Error().Err(err).Msgf("send account create failed")
+		return err
+	}
+	if err == nil && bres.CheckTx.Code == atypes.CodeType_OK {
+		log.Debug().Msgf("%v follow %v", follower, following)
+	}
+	fmt.Println(bres)
+	return nil
 }
 
 // [account_create
@@ -221,7 +327,11 @@ func sendPostTx(ops map[string]interface{}, client *redis.Client) error {
 		if err := client.Set(ops["permlink"].(string), strconv.Itoa(seqNo+1), 0).Err(); err != nil {
 			return err
 		}
-		fmt.Println("post:", author, seqNo + 1)
+		if parentAuthor != "" {
+			fmt.Println("comment:", author, seqNo + 1)
+		} else {
+			fmt.Println("post:", author, seqNo + 1)
+		}
 	}
 	fmt.Println(bres)
 	return nil
@@ -287,7 +397,7 @@ func main() {
 		Password: viper.GetString("chain_redis_password"),
 		DB:       viper.GetInt64("chain_redis_db"),
 	})
-	for i := uint(1016000); i < 20101000; i++ {
+	for i := uint(1059400); i < 20101000; i++ {
 		printTxType(i, redisClient)
 	}
 }
