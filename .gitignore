@@ -3,3 +3,4 @@ data/
 cmd/linocli/linocli
 cmd/linocoin/linocoin
 lino
+steem/steem
