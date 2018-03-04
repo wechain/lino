@@ -30,7 +30,6 @@ const (
 
 	ChainID = "lino"
 
-
 	ctypeFollow = "follow"
 )
 
@@ -254,6 +253,27 @@ func sendRegisterTx(username string, privKey crypto.PrivKeyEd25519) error {
 	return nil
 }
 
+func sendRegisterTxWithNode(username string, privKey crypto.PrivKeyEd25519, node *rpcclient.HTTP) error {
+	tx := new(ttx.RegisterTx)
+	tx.Username = btypes.GetAccountNameFromString(username)
+	tx.PubKey = privKey.PubKey()
+
+	registerTx := &ttx.CliRegisterTx{
+		ChainID: ChainID,
+		Tx:      tx,
+	}
+
+	bres, err := SignAndBroadcastWithNode(registerTx, privKey, node)
+	if err != nil {
+		log.Error().Err(err).Msgf("send account create failed")
+		return err
+	}
+	if err == nil && bres.CheckTx.Code == atypes.CodeType_OK {
+		// fmt.Println("register username:", username)
+	}
+	// fmt.Println(bres)
+	return nil
+}
 
 // [comment map[json_metadata:{"tags":["hi"],"app":"steemit/0.1"} parent_author:justinashby
 // parent_permlink:re-prettykitten-re-sagittarian-re-prettykitten-i-m-new-20170312t054954875z
@@ -263,6 +283,7 @@ func sendRegisterTx(username string, privKey crypto.PrivKeyEd25519) error {
 
 
 func sendPostTx(ops map[string]interface{}, client *redis.Client) error {
+	log.Debug().Msgf("Process ops type: %s", ops)
 	author, ok := ops["author"].(string)
 	if !ok {
 		return nil
@@ -333,15 +354,27 @@ func sendPostTx(ops map[string]interface{}, client *redis.Client) error {
 			fmt.Println("post:", author, seqNo + 1)
 		}
 	}
+
 	fmt.Println(bres)
 	return nil
 }
 
+	
 func SignAndBroadcast(tx keys.Signable, privKey crypto.PrivKeyEd25519) (*ctypes.ResultBroadcastTxCommit, error) {
 	sbytes := tx.SignBytes()
 	tx.Sign(privKey.PubKey(), privKey.Sign(sbytes))
 
-	node := rpcclient.NewHTTP(viper.GetString("chain_validator"), "/websocket")
+	_, err := tx.TxBytes()
+	if err != nil {
+		return nil, err
+	}
+	//return node.BroadcastTxCommit(pkg)
+	return nil, err
+}
+
+func SignAndBroadcastWithNode(tx keys.Signable, privKey crypto.PrivKeyEd25519, node *rpcclient.HTTP) (*ctypes.ResultBroadcastTxCommit, error) {
+	sbytes := tx.SignBytes()
+	tx.Sign(privKey.PubKey(), privKey.Sign(sbytes))
 
 	pkg, err := tx.TxBytes()
 	if err != nil {
@@ -374,10 +407,21 @@ func GetOrSetPrivKey(username string, client *redis.Client) (*crypto.PrivKeyEd25
 	}
 	return &privKey, err
 }
+var valList = [8]string{"52.156.165.226:46657","20.188.7.127:46657","52.174.154.12:46657","191.232.39.67:46657","52.158.235.117:46657","52.158.238.189:46657","52.158.239.200:46657","52.158.239.67:46657"}
+func singleThread(startIndex, interval int, redisClient *redis.Client, done chan bool) {
+	var node = rpcclient.NewHTTP(valList[(startIndex/interval)%len(valList)], "/websocket")
+	for i := startIndex; i < startIndex + interval; i++ {
+		privKey := crypto.GenPrivKeyEd25519()
+		sendRegisterTxWithNode("username"+strconv.Itoa(i), privKey, node)
+	}
+	done <- true
+}
 
 func main() {
 	env := os.Getenv("GO_ENV")
 	var configFileName string
+
+    done := make(chan bool)
 	switch env {
 	case "production":
 		configFileName = "chain_config_prod"
@@ -397,7 +441,12 @@ func main() {
 		Password: viper.GetString("chain_redis_password"),
 		DB:       viper.GetInt64("chain_redis_db"),
 	})
-	for i := uint(1059400); i < 20101000; i++ {
-		printTxType(i, redisClient)
+	for i := 0; i < viper.GetInt("thread_number"); i ++ {
+		go singleThread(viper.GetInt("start_index") + i * viper.GetInt("interval"), viper.GetInt("interval"), redisClient, done)
 	}
+	for i := 0; i < viper.GetInt("thread_number"); i ++ {
+		<- done
+	}
+
+
 }

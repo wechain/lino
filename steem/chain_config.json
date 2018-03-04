@@ -2,6 +2,9 @@
  "chain_redis_host": "localhost",
  "chain_redis_password": "",
  "chain_redis_port": "6379",
- "chain_redis_db": 9,
- "chain_validator": "tcp://52.158.235.117:46657"
+ "chain_redis_db": 10,
+ "chain_validator": "tcp://52.158.239.67:46657",
+ "start_index": 0,
+ "interval": 10000,
+ "thread_number": 1000
 }
