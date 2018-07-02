@@ -63,6 +63,10 @@ func (msg ValidatorDepositMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg ValidatorDepositMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg ValidatorDepositMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -105,6 +109,10 @@ func (msg ValidatorWithdrawMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg ValidatorWithdrawMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg ValidatorWithdrawMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -140,6 +148,10 @@ func (msg ValidatorRevokeMsg) String() string {
 
 func (msg ValidatorRevokeMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg ValidatorRevokeMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg ValidatorRevokeMsg) GetSignBytes() []byte {

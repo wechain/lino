@@ -43,7 +43,7 @@ func (accManager AccountManager) CreateAccount(
 	if err != nil {
 		return err
 	}
-	if accParams.RegisterFee.IsGT(registerFee) {
+	if accParams.MinimumRegisterFeeRequirement.IsGT(registerFee) {
 		return ErrRegisterFeeInsufficient()
 	}
 	if err := accManager.storage.SetPendingStakeQueue(
@@ -78,12 +78,14 @@ func (accManager AccountManager) CreateAccount(
 		return ErrAccountCreateFailed(username)
 	}
 	if err := accManager.AddSavingCoinWithFullStake(
-		ctx, username, accParams.RegisterFee, referrer,
+		ctx, username, accParams.MinimumRegisterFeeRequirement, referrer,
 		"init register fee with full stake", types.TransferIn); err != nil {
 		return err
 	}
 	if err := accManager.AddSavingCoin(
-		ctx, username, registerFee.Minus(accParams.RegisterFee), referrer, "init account", types.TransferIn); err != nil {
+		ctx, username,
+		registerFee.Minus(accParams.MinimumRegisterFeeRequirement),
+		referrer, "init account", types.TransferIn); err != nil {
 		return err
 	}
 	return nil

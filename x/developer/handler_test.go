@@ -150,7 +150,7 @@ func TestRevokePermissionMsg(t *testing.T) {
 	dm.InitGenesis(ctx)
 
 	minBalance := types.NewCoinFromInt64(1 * types.Decimals)
-	createTestAccount(ctx, am, "user1", accParam.RegisterFee)
+	createTestAccount(ctx, am, "user1", accParam.MinimumRegisterFeeRequirement)
 	createTestAccount(ctx, am, "user2", minBalance)
 	appPriv := createTestAccount(ctx, am, "app", minBalance)
 	err = dm.RegisterDeveloper(ctx, types.AccountKey("app"), param.DeveloperMinDeposit)

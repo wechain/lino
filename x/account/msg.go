@@ -95,6 +95,11 @@ func (msg FollowMsg) GetPermission() types.Permission {
 	return types.PostPermission
 }
 
+// Implements Msg.
+func (msg FollowMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowCostLevelMsg
+}
+
 func (msg FollowMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -136,6 +141,11 @@ func (msg UnfollowMsg) GetPermission() types.Permission {
 	return types.PostPermission
 }
 
+// Implements Msg.
+func (msg UnfollowMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowCostLevelMsg
+}
+
 func (msg UnfollowMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -171,6 +181,11 @@ func (msg ClaimMsg) String() string {
 
 func (msg ClaimMsg) GetPermission() types.Permission {
 	return types.PostPermission
+}
+
+// Implements Msg.
+func (msg ClaimMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowCostLevelMsg
 }
 
 func (msg ClaimMsg) GetSignBytes() []byte {
@@ -224,6 +239,11 @@ func (msg TransferMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+// Implements Msg.
+func (msg TransferMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowCostLevelMsg
+}
+
 func (msg TransferMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -267,6 +287,11 @@ func (msg RecoverMsg) String() string {
 
 func (msg RecoverMsg) GetPermission() types.Permission {
 	return types.MasterPermission
+}
+
+// Implements Msg.
+func (msg RecoverMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg RecoverMsg) GetSignBytes() []byte {
@@ -343,6 +368,11 @@ func (msg RegisterMsg) GetPermission() types.Permission {
 }
 
 // Implements Msg.
+func (msg RegisterMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
+// Implements Msg.
 func (msg RegisterMsg) GetSigners() []sdk.Address {
 	return []sdk.Address{sdk.Address(msg.Referrer)}
 }
@@ -379,6 +409,11 @@ func (msg UpdateAccountMsg) String() string {
 // Implements Msg.
 func (msg UpdateAccountMsg) GetPermission() types.Permission {
 	return types.PostPermission
+}
+
+// Implements Msg.
+func (msg UpdateAccountMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowCostLevelMsg
 }
 
 // Implements Msg.

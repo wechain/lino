@@ -9,8 +9,11 @@ type Permlink string
 // ProposalKey key format in KVStore
 type ProposalKey string
 
-// user permission type to present different permission for different msg
+// msg Permission
 type Permission int
+
+// msg CapacityLevel
+type CapacityLevel int
 
 // indicates the current proposal status
 type ProposalResult int

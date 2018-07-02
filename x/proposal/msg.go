@@ -164,6 +164,10 @@ func (msg DeletePostContentMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg DeletePostContentMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg DeletePostContentMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -208,6 +212,11 @@ func (msg UpgradeProtocolMsg) String() string {
 
 func (msg UpgradeProtocolMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+// Implements Msg.
+func (msg UpgradeProtocolMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg UpgradeProtocolMsg) GetSignBytes() []byte {
@@ -260,6 +269,11 @@ func (msg ChangeGlobalAllocationParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+// Implements Msg.
+func (msg ChangeGlobalAllocationParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg ChangeGlobalAllocationParamMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -305,6 +319,11 @@ func (msg ChangeEvaluateOfContentValueParamMsg) String() string {
 
 func (msg ChangeEvaluateOfContentValueParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+// Implements Msg.
+func (msg ChangeEvaluateOfContentValueParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg ChangeEvaluateOfContentValueParamMsg) GetSignBytes() []byte {
@@ -353,6 +372,11 @@ func (msg ChangeInfraInternalAllocationParamMsg) String() string {
 
 func (msg ChangeInfraInternalAllocationParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+// Implements Msg.
+func (msg ChangeInfraInternalAllocationParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg ChangeInfraInternalAllocationParamMsg) GetSignBytes() []byte {
@@ -408,6 +432,10 @@ func (msg ChangeVoteParamMsg) String() string {
 
 func (msg ChangeVoteParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg ChangeVoteParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg ChangeVoteParamMsg) GetSignBytes() []byte {
@@ -477,6 +505,10 @@ func (msg ChangeProposalParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg ChangeProposalParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg ChangeProposalParamMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -527,6 +559,10 @@ func (msg ChangeDeveloperParamMsg) String() string {
 
 func (msg ChangeDeveloperParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg ChangeDeveloperParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg ChangeDeveloperParamMsg) GetSignBytes() []byte {
@@ -588,6 +624,10 @@ func (msg ChangeValidatorParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg ChangeValidatorParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg ChangeValidatorParamMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -637,6 +677,10 @@ func (msg ChangeCoinDayParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg ChangeCoinDayParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg ChangeCoinDayParamMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -670,7 +714,7 @@ func (msg ChangeAccountParamMsg) ValidateBasic() sdk.Error {
 	}
 
 	if types.NewCoinFromInt64(0).IsGT(msg.Parameter.MinimumBalance) ||
-		types.NewCoinFromInt64(0).IsGT(msg.Parameter.RegisterFee) {
+		types.NewCoinFromInt64(0).IsGT(msg.Parameter.MinimumRegisterFeeRequirement) {
 		return ErrIllegalParameter()
 	}
 	return nil
@@ -682,6 +726,10 @@ func (msg ChangeAccountParamMsg) String() string {
 
 func (msg ChangeAccountParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg ChangeAccountParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg ChangeAccountParamMsg) GetSignBytes() []byte {
@@ -728,6 +776,10 @@ func (msg ChangePostParamMsg) String() string {
 
 func (msg ChangePostParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg ChangePostParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg ChangePostParamMsg) GetSignBytes() []byte {
@@ -780,6 +832,10 @@ func (msg ChangeBandwidthParamMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg ChangeBandwidthParamMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg ChangeBandwidthParamMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -819,6 +875,10 @@ func (msg VoteProposalMsg) String() string {
 
 func (msg VoteProposalMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg VoteProposalMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg VoteProposalMsg) GetSignBytes() []byte {

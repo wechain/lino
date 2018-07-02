@@ -179,8 +179,8 @@ func TestTransferNormal(t *testing.T) {
 		{testName: "user1 transfers 200 LNO to user2 (by username)",
 			msg:                 NewTransferMsg("user1", "user2", l200, memo),
 			wantOK:              true,
-			wantSenderBalance:   c1800.Plus(accParam.RegisterFee),
-			wantReceiverBalance: c200.Plus(accParam.RegisterFee),
+			wantSenderBalance:   c1800.Plus(accParam.MinimumRegisterFeeRequirement),
+			wantReceiverBalance: c200.Plus(accParam.MinimumRegisterFeeRequirement),
 		},
 	}
 
@@ -225,7 +225,7 @@ func TestSenderCoinNotEnough(t *testing.T) {
 	assert.Equal(t, ErrAccountSavingCoinNotEnough().Result(), result)
 
 	acc1Balance, _ := am.GetSavingFromBank(ctx, types.AccountKey("user1"))
-	assert.Equal(t, acc1Balance, accParam.RegisterFee)
+	assert.Equal(t, acc1Balance, accParam.MinimumRegisterFeeRequirement)
 }
 
 func TestReceiverUsernameIncorrect(t *testing.T) {
@@ -279,9 +279,9 @@ func TestHandleAccountRecover(t *testing.T) {
 		}
 		checkAccountInfo(t, ctx, types.AccountKey(tc.user), accInfo)
 		newBank := model.AccountBank{
-			Saving:  accParam.RegisterFee,
+			Saving:  accParam.MinimumRegisterFeeRequirement,
 			NumOfTx: 1,
-			Stake:   accParam.RegisterFee,
+			Stake:   accParam.MinimumRegisterFeeRequirement,
 		}
 		checkBankKVByUsername(t, ctx, types.AccountKey(tc.user), newBank)
 	}

@@ -48,6 +48,11 @@ func (msg ProviderReportMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+// Implements Msg.
+func (msg ProviderReportMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowestCostLevelMsg
+}
+
 func (msg ProviderReportMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {

@@ -158,7 +158,7 @@ func (ph ParamHolder) InitParam(ctx sdk.Context) error {
 
 	accountParam := &AccountParam{
 		MinimumBalance:                types.NewCoinFromInt64(1 * types.Decimals),
-		RegisterFee:                   types.NewCoinFromInt64(1 * types.Decimals),
+		MinimumRegisterFeeRequirement: types.NewCoinFromInt64(1 * types.Decimals),
 		BalanceHistoryBundleSize:      100,
 		MaximumMicropaymentGrantTimes: 20,
 	}

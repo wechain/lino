@@ -354,6 +354,41 @@ func (msg ViewMsg) GetPermission() types.Permission {
 	return types.PostPermission
 }
 
+// Implements Msg.
+func (msg CreatePostMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.HighestCostLevelMsg
+}
+
+// Implements Msg.
+func (msg UpdatePostMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
+// Implements Msg.
+func (msg DeletePostMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowCostLevelMsg
+}
+
+// Implements Msg.
+func (msg LikeMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
+// Implements Msg.
+func (msg DonateMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowCostLevelMsg
+}
+
+// Implements Msg.
+func (msg ReportOrUpvoteMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
+// Implements Msg.
+func (msg ViewMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.LowestCostLevelMsg
+}
+
 // GetSignBytes implements sdk.Msg
 func (msg CreatePostMsg) GetSignBytes() []byte {
 	return getSignBytes(msg)

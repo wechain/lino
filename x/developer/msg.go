@@ -69,6 +69,11 @@ func (msg DeveloperRegisterMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+// Implements Msg.
+func (msg DeveloperRegisterMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.HighCostLevelMsg
+}
+
 func (msg DeveloperRegisterMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -104,6 +109,11 @@ func (msg DeveloperRevokeMsg) String() string {
 
 func (msg DeveloperRevokeMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+// Implements Msg.
+func (msg DeveloperRevokeMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.HighCostLevelMsg
 }
 
 func (msg DeveloperRevokeMsg) GetSignBytes() []byte {
@@ -173,6 +183,11 @@ func (msg GrantPermissionMsg) GetPermission() types.Permission {
 	return types.GrantPostPermission
 }
 
+// Implements Msg.
+func (msg GrantPermissionMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg GrantPermissionMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -222,6 +237,11 @@ func (msg RevokePermissionMsg) GetPermission() types.Permission {
 		return types.GrantMicropaymentPermission
 	}
 	return types.GrantPostPermission
+}
+
+// Implements Msg.
+func (msg RevokePermissionMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg RevokePermissionMsg) GetSignBytes() []byte {

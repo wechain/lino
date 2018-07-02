@@ -412,7 +412,7 @@ func TestHandlerPostDonate(t *testing.T) {
 				TotalReward:             types.NewCoinFromInt64(95 * types.Decimals),
 				RedistributionSplitRate: sdk.ZeroRat(),
 			},
-			accParam.RegisterFee, accParam.RegisterFee.Plus(
+			accParam.MinimumRegisterFeeRequirement, accParam.MinimumRegisterFeeRequirement.Plus(
 				types.NewCoinFromInt64(95 * types.Decimals)),
 			RewardEvent{
 				PostAuthor: author,
@@ -428,7 +428,7 @@ func TestHandlerPostDonate(t *testing.T) {
 			userWithSufficientSaving, types.LNO("100"), author, false, postID,
 			ErrAccountSavingCoinNotEnough(types.GetPermlink(author, postID)).Result(),
 			model.PostMeta{},
-			accParam.RegisterFee, accParam.RegisterFee.Plus(
+			accParam.MinimumRegisterFeeRequirement, accParam.MinimumRegisterFeeRequirement.Plus(
 				types.NewCoinFromInt64(95 * types.Decimals)),
 			RewardEvent{}, 1, types.NewCoinFromInt64(100 * types.Decimals),
 		},
@@ -443,9 +443,9 @@ func TestHandlerPostDonate(t *testing.T) {
 				TotalReward:             types.NewCoinFromInt64(14250000),
 				RedistributionSplitRate: sdk.ZeroRat(),
 			},
-			accParam.RegisterFee.Plus(
+			accParam.MinimumRegisterFeeRequirement.Plus(
 				types.NewCoinFromInt64(50 * types.Decimals)),
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(14250000)),
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(14250000)),
 			RewardEvent{
 				PostAuthor: author,
 				PostID:     postID,
@@ -467,8 +467,8 @@ func TestHandlerPostDonate(t *testing.T) {
 				TotalReward:             types.NewCoinFromInt64(190 * types.Decimals),
 				RedistributionSplitRate: sdk.ZeroRat(),
 			},
-			accParam.RegisterFee,
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
+			accParam.MinimumRegisterFeeRequirement,
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
 			RewardEvent{
 				PostAuthor: author,
 				PostID:     postID,
@@ -483,16 +483,16 @@ func TestHandlerPostDonate(t *testing.T) {
 			userWithSufficientSaving, types.LNO("1"), author, false, "invalid",
 			ErrDonatePostNotFound(types.GetPermlink(author, "invalid")).Result(),
 			model.PostMeta{},
-			accParam.RegisterFee,
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
+			accParam.MinimumRegisterFeeRequirement,
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
 			RewardEvent{}, 1, types.NewCoinFromInt64(200 * types.Decimals),
 		},
 		{"invalid target author",
 			userWithSufficientSaving, types.LNO("1"), types.AccountKey("invalid"), false, postID,
 			ErrDonatePostNotFound(types.GetPermlink(types.AccountKey("invalid"), postID)).Result(),
 			model.PostMeta{},
-			accParam.RegisterFee,
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
+			accParam.MinimumRegisterFeeRequirement,
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
 			RewardEvent{}, 0, types.NewCoinFromInt64(200 * types.Decimals),
 		},
 		{"donate to self",
@@ -506,16 +506,16 @@ func TestHandlerPostDonate(t *testing.T) {
 				TotalReward:             types.NewCoinFromInt64(190 * types.Decimals),
 				RedistributionSplitRate: sdk.ZeroRat(),
 			},
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(190 * types.Decimals)),
 			RewardEvent{}, 0, types.NewCoinFromInt64(20000000),
 		},
 		{"invalid micropayment",
 			microPaymentUser, types.LNO("10000"), author, true, postID,
 			ErrMicropaymentExceedsLimitation().Result(),
 			model.PostMeta{},
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(2)),
-			accParam.RegisterFee.Plus(
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(2)),
+			accParam.MinimumRegisterFeeRequirement.Plus(
 				types.NewCoinFromInt64(19000000)),
 			RewardEvent{}, 0, types.NewCoinFromInt64(20000000),
 		},
@@ -530,8 +530,8 @@ func TestHandlerPostDonate(t *testing.T) {
 				TotalReward:             types.NewCoinFromInt64(19000001),
 				RedistributionSplitRate: sdk.ZeroRat(),
 			},
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(1)),
-			accParam.RegisterFee.Plus(
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(1)),
+			accParam.MinimumRegisterFeeRequirement.Plus(
 				types.NewCoinFromInt64(19000001)),
 			RewardEvent{
 				PostAuthor: author,
@@ -547,8 +547,8 @@ func TestHandlerPostDonate(t *testing.T) {
 			microPaymentUser, types.LNO("0.00001"), author1, false, deletedPostID,
 			ErrDonatePostIsDeleted(types.GetPermlink(author1, deletedPostID)).Result(),
 			model.PostMeta{},
-			accParam.RegisterFee.Plus(types.NewCoinFromInt64(1)),
-			accParam.RegisterFee.Plus(
+			accParam.MinimumRegisterFeeRequirement.Plus(types.NewCoinFromInt64(1)),
+			accParam.MinimumRegisterFeeRequirement.Plus(
 				types.NewCoinFromInt64(19000001)),
 			RewardEvent{}, 0, types.NewCoinFromInt64(20000001),
 		},
@@ -720,11 +720,11 @@ func TestHandlerReportOrUpvote(t *testing.T) {
 		expectTotalReportStake types.Coin
 		expectTotalUpvoteStake types.Coin
 	}{
-		{"user1 report", string(user1), true, accParam.RegisterFee, types.NewCoinFromInt64(0)},
+		{"user1 report", string(user1), true, accParam.MinimumRegisterFeeRequirement, types.NewCoinFromInt64(0)},
 		{"user2 report", string(user2), true,
-			accParam.RegisterFee.Plus(accParam.RegisterFee), types.NewCoinFromInt64(0)},
+			accParam.MinimumRegisterFeeRequirement.Plus(accParam.MinimumRegisterFeeRequirement), types.NewCoinFromInt64(0)},
 		{"user3 upvote", string(user3), false,
-			accParam.RegisterFee.Plus(accParam.RegisterFee), accParam.RegisterFee},
+			accParam.MinimumRegisterFeeRequirement.Plus(accParam.MinimumRegisterFeeRequirement), accParam.MinimumRegisterFeeRequirement},
 	}
 
 	for _, tc := range testCases {

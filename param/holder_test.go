@@ -200,7 +200,7 @@ func TestAccountParam(t *testing.T) {
 	ctx := getContext()
 	parameter := AccountParam{
 		MinimumBalance:                types.NewCoinFromInt64(1 * types.Decimals),
-		RegisterFee:                   types.NewCoinFromInt64(1 * types.Decimals),
+		MinimumRegisterFeeRequirement: types.NewCoinFromInt64(1 * types.Decimals),
 		BalanceHistoryBundleSize:      100,
 		MaximumMicropaymentGrantTimes: 20,
 	}
@@ -296,7 +296,7 @@ func TestInitParam(t *testing.T) {
 	}
 	accountParam := AccountParam{
 		MinimumBalance:                types.NewCoinFromInt64(1 * types.Decimals),
-		RegisterFee:                   types.NewCoinFromInt64(1 * types.Decimals),
+		MinimumRegisterFeeRequirement: types.NewCoinFromInt64(1 * types.Decimals),
 		BalanceHistoryBundleSize:      100,
 		MaximumMicropaymentGrantTimes: 20,
 	}

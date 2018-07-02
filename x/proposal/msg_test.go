@@ -310,21 +310,21 @@ func TestChangeProposalParamMsg(t *testing.T) {
 
 func TestChangeAccountParamMsg(t *testing.T) {
 	p1 := param.AccountParam{
-		MinimumBalance: types.NewCoinFromInt64(1 * types.Decimals),
-		RegisterFee:    types.NewCoinFromInt64(1 * types.Decimals),
+		MinimumBalance:                types.NewCoinFromInt64(1 * types.Decimals),
+		MinimumRegisterFeeRequirement: types.NewCoinFromInt64(1 * types.Decimals),
 	}
 
 	p2 := p1
 	p2.MinimumBalance = types.NewCoinFromInt64(0)
 
 	p3 := p1
-	p3.RegisterFee = types.NewCoinFromInt64(0)
+	p3.MinimumRegisterFeeRequirement = types.NewCoinFromInt64(0)
 
 	p4 := p1
-	p4.RegisterFee = types.NewCoinFromInt64(-1)
+	p4.MinimumRegisterFeeRequirement = types.NewCoinFromInt64(-1)
 
 	p5 := p1
-	p5.RegisterFee = types.NewCoinFromInt64(-1)
+	p5.MinimumRegisterFeeRequirement = types.NewCoinFromInt64(-1)
 
 	cases := []struct {
 		changeAccountParamMsg ChangeAccountParamMsg

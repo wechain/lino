@@ -80,6 +80,10 @@ func (msg VoterDepositMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg VoterDepositMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg VoterDepositMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg) // XXX: ensure some canonical form
 	if err != nil {
@@ -123,6 +127,10 @@ func (msg VoterWithdrawMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg VoterWithdrawMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg VoterWithdrawMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg)
 	if err != nil {
@@ -160,6 +168,10 @@ func (msg VoterRevokeMsg) String() string {
 
 func (msg VoterRevokeMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg VoterRevokeMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg VoterRevokeMsg) GetSignBytes() []byte {
@@ -210,6 +222,10 @@ func (msg DelegateMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
 }
 
+func (msg DelegateMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
+}
+
 func (msg DelegateMsg) GetSignBytes() []byte {
 	b, err := msgCdc.MarshalJSON(msg)
 	if err != nil {
@@ -251,6 +267,10 @@ func (msg RevokeDelegationMsg) String() string {
 
 func (msg RevokeDelegationMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg RevokeDelegationMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg RevokeDelegationMsg) GetSignBytes() []byte {
@@ -297,6 +317,10 @@ func (msg DelegatorWithdrawMsg) String() string {
 
 func (msg DelegatorWithdrawMsg) GetPermission() types.Permission {
 	return types.TransactionPermission
+}
+
+func (msg DelegatorWithdrawMsg) GetCapacityLevel() types.CapacityLevel {
+	return types.NormalCostLevelMsg
 }
 
 func (msg DelegatorWithdrawMsg) GetSignBytes() []byte {

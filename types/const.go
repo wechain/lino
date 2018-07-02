@@ -73,6 +73,13 @@ const (
 	InfraDeposit     = TransferDetailType(19)
 	ProposalDeposit  = TransferDetailType(20)
 
+	// Different capacity levels
+	HighestCostLevelMsg = CapacityLevel(1)
+	HighCostLevelMsg    = CapacityLevel(2)
+	NormalCostLevelMsg  = CapacityLevel(3)
+	LowCostLevelMsg     = CapacityLevel(4)
+	LowestCostLevelMsg  = CapacityLevel(5)
+
 	// UsernameReCheck is used to check user registration
 	UsernameReCheck = "^[a-z0-9]([a-z0-9_-]){2,20}$"
 

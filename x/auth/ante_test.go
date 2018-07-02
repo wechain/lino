@@ -37,7 +37,8 @@ func createTestAccount(
 	postKey := crypto.GenPrivKeyEd25519()
 	accParams, _ := ph.GetAccountParam(ctx)
 	am.CreateAccount(ctx, "referrer", types.AccountKey(username),
-		masterKey.PubKey(), transactionKey.PubKey(), micropaymentKey.PubKey(), postKey.PubKey(), accParams.RegisterFee)
+		masterKey.PubKey(), transactionKey.PubKey(), micropaymentKey.PubKey(), postKey.PubKey(),
+		accParams.MinimumRegisterFeeRequirement)
 	return masterKey, transactionKey, postKey, types.AccountKey(username)
 }
 
@@ -72,8 +73,9 @@ type TestMsg struct {
 
 var _ types.Msg = TestMsg{}
 
-func (msg TestMsg) Type() string                    { return "normal msg" }
-func (msg TestMsg) GetPermission() types.Permission { return types.PostPermission }
+func (msg TestMsg) Type() string                          { return "normal msg" }
+func (msg TestMsg) GetPermission() types.Permission       { return types.PostPermission }
+func (msg TestMsg) GetCapacityLevel() types.CapacityLevel { return types.NormalCostLevelMsg }
 func (msg TestMsg) GetSignBytes() []byte {
 	bz, err := json.Marshal(msg.signers)
 	if err != nil {
